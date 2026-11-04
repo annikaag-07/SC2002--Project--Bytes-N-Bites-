@@ -1,0 +1,600 @@
+================================================================
+ RESTAURANT RUSH - you are the manager
+================================================================
+Seed: 2002   Turns: 18
+Menu:
+  - Salad ($9.00, 1 unit)
+  - Burger ($15.00, 1 unit)
+  - Pasta ($18.00, 2 units)
+Enter ids like C1, T1, O1 (or just the number). Lines starting with # are ignored.
+
+================================================================
+ TURN 1 / 18
+================================================================
+  * C1 (Regular) arrives and joins the waiting queue with satisfaction 100.
+Revenue: $0.00 | Avg satisfaction (paid): N/A
+Waiting queue: C1(Regular, 100)
+Tables: T1: free   T2: free
+Customers:
+  C1   Regular  sat 100  WAITING
+Orders:
+  (none yet)
+Staff tasks available:
+  Waiter (1 task):  seat C1(Regular, 100) at T1, T2 | take order (none) | serve (none)
+  Chef (1 unit):    advance (none)
+  Cashier (auto):   nobody to charge
+Waiter: 1) Seat a queued customer  2) Take an order  3) Serve a READY order  0) Wait
+Waiter choice: # Stage 1 defeat run. Command: ./run.sh --seed 2002 < runs/stage1-defeat.txt
+Waiter choice: # Strategy: a careless manager. It tries some invalid commands (each one is rejected with a reason
+Waiter choice: # and the same staff member is asked again, with no task used up), serves C1 only, then lets the
+Waiter choice: # kitchen and floor idle while customers lose patience and leave.
+Waiter choice: # --- Turn 1: invalid: serve an order that does not exist. Then an out-of-range menu number.
+Waiter choice: 3
+  Order to serve: O1
+  ! Not allowed: There is no order 'O1'. Choose again.
+Waiter: 1) Seat a queued customer  2) Take an order  3) Serve a READY order  0) Wait
+Waiter choice: 7
+  ! '7' is not an option. Enter 0, 1, 2 or 3.
+Waiter: 1) Seat a queued customer  2) Take an order  3) Serve a READY order  0) Wait
+Waiter choice: # valid: seat C1. Chef: invalid (no orders yet), then Wait.
+Waiter choice: 1
+  Customer to seat: C1
+  Table: T1
+  * Waiter seats C1 at T1.
+Chef: 1) Advance an order by one unit  0) Wait
+Chef choice: 1
+  Order to prepare: O1
+  ! Not allowed: There is no order 'O1'. Choose again.
+Chef: 1) Advance an order by one unit  0) Wait
+Chef choice: 0
+  * Chef waits this turn.
+-- Eating, payment, waiting --
+  * Cashier: nobody is ready to pay.
+  * C1 (SEATED) waits: satisfaction 100 -> 92.
+-- End of turn 1 --
+Served: 0 | Unhappy departures: 0 | Paid: 0 | Revenue: $0.00 | Avg satisfaction (paid): N/A | Turns used: 1/18
+
+================================================================
+ TURN 2 / 18
+================================================================
+Revenue: $0.00 | Avg satisfaction (paid): N/A
+Waiting queue: (none)
+Tables: T1: C1   T2: free
+Customers:
+  C1   Regular  sat  92  SEATED       at T1
+Orders:
+  (none yet)
+Staff tasks available:
+  Waiter (1 task):  seat (none) at T2 | take order C1(Regular, 92) | serve (none)
+  Chef (1 unit):    advance (none)
+  Cashier (auto):   nobody to charge
+Waiter: 1) Seat a queued customer  2) Take an order  3) Serve a READY order  0) Wait
+Waiter choice: # --- Turn 2: take C1's order (Salad). Chef: non-numeric input is rejected, then cooks O1.
+Waiter choice: 2
+  Customer whose order to take: C1
+  * Waiter takes C1's order O1: C1 chooses Salad ($9.00, 1 unit). Locked price: $9.00.
+Chef: 1) Advance an order by one unit  0) Wait
+Chef choice: abc
+  ! 'abc' is not an option. Enter 0 or 1.
+Chef: 1) Advance an order by one unit  0) Wait
+Chef choice: 1
+  Order to prepare: O1
+  * Chef prepares O1 (Salad): units 1/1. READY (can be served from next turn).
+-- Eating, payment, waiting --
+  * Cashier: nobody is ready to pay.
+  * C1 (ORDERED) waits: satisfaction 92 -> 84.
+-- End of turn 2 --
+Served: 0 | Unhappy departures: 0 | Paid: 0 | Revenue: $0.00 | Avg satisfaction (paid): N/A | Turns used: 2/18
+
+================================================================
+ TURN 3 / 18
+================================================================
+Revenue: $0.00 | Avg satisfaction (paid): N/A
+Waiting queue: (none)
+Tables: T1: C1   T2: free
+Customers:
+  C1   Regular  sat  84  ORDERED      at T1
+Orders:
+  O1   C1   Salad                        READY      units 1/1  price $9.00
+Staff tasks available:
+  Waiter (1 task):  seat (none) at T2 | take order (none) | serve O1[C1 Salad 1/1]
+  Chef (1 unit):    advance (none)
+  Cashier (auto):   nobody to charge
+Waiter: 1) Seat a queued customer  2) Take an order  3) Serve a READY order  0) Wait
+Waiter choice: # --- Turn 3: invalid: try to seat C1 again (already seated). Then serve O1.
+Waiter choice: 1
+  Customer to seat: C1
+  Table: T2
+  ! Not allowed: C1 is not in the waiting queue (state ORDERED). Choose again.
+Waiter: 1) Seat a queued customer  2) Take an order  3) Serve a READY order  0) Wait
+Waiter choice: 3
+  Order to serve: O1
+  * Waiter serves O1 (Salad) to C1. SERVED.
+Chef: 1) Advance an order by one unit  0) Wait
+Chef choice: 0
+  * Chef waits this turn.
+-- Eating, payment, waiting --
+  * Cashier: nobody is ready to pay.
+-- End of turn 3 --
+Served: 1 | Unhappy departures: 0 | Paid: 0 | Revenue: $0.00 | Avg satisfaction (paid): N/A | Turns used: 3/18
+
+================================================================
+ TURN 4 / 18
+================================================================
+  * C2 (Regular) arrives and joins the waiting queue with satisfaction 100.
+Revenue: $0.00 | Avg satisfaction (paid): N/A
+Waiting queue: C2(Regular, 100)
+Tables: T1: C1   T2: free
+Customers:
+  C1   Regular  sat  84  EATING       at T1
+  C2   Regular  sat 100  WAITING
+Orders:
+  O1   C1   Salad                        SERVED     units 1/1  price $9.00
+Staff tasks available:
+  Waiter (1 task):  seat C2(Regular, 100) at T2 | take order (none) | serve (none)
+  Chef (1 unit):    advance (none)
+  Cashier (auto):   nobody to charge
+Waiter: 1) Seat a queued customer  2) Take an order  3) Serve a READY order  0) Wait
+Waiter choice: # --- Turns 4 onward: the manager only waits; everyone else eventually leaves unhappy.
+Waiter choice: 0
+  * Waiter waits this turn.
+Chef: 1) Advance an order by one unit  0) Wait
+Chef choice: 0
+  * Chef waits this turn.
+-- Eating, payment, waiting --
+  * Cashier: nobody is ready to pay.
+  * C1 finishes eating: READY_TO_PAY (can pay from next turn).
+  * C2 (WAITING) waits: satisfaction 100 -> 92.
+-- End of turn 4 --
+Served: 1 | Unhappy departures: 0 | Paid: 0 | Revenue: $0.00 | Avg satisfaction (paid): N/A | Turns used: 4/18
+
+================================================================
+ TURN 5 / 18
+================================================================
+Revenue: $0.00 | Avg satisfaction (paid): N/A
+Waiting queue: C2(Regular, 92)
+Tables: T1: C1   T2: free
+Customers:
+  C1   Regular  sat  84  READY_TO_PAY at T1
+  C2   Regular  sat  92  WAITING
+Orders:
+  O1   C1   Salad                        SERVED     units 1/1  price $9.00
+Staff tasks available:
+  Waiter (1 task):  seat C2(Regular, 92) at T2 | take order (none) | serve (none)
+  Chef (1 unit):    advance (none)
+  Cashier (auto):   will charge C1
+Waiter: 1) Seat a queued customer  2) Take an order  3) Serve a READY order  0) Wait
+Waiter choice: 0
+  * Waiter waits this turn.
+Chef: 1) Advance an order by one unit  0) Wait
+Chef choice: 0
+  * Chef waits this turn.
+-- Eating, payment, waiting --
+  * Cashier collects $9.00 from C1 for O1. PAID; satisfaction 84 recorded; table T1 freed.
+  * C2 (WAITING) waits: satisfaction 92 -> 84.
+-- End of turn 5 --
+Served: 1 | Unhappy departures: 0 | Paid: 1 | Revenue: $9.00 | Avg satisfaction (paid): 84.0 | Turns used: 5/18
+
+================================================================
+ TURN 6 / 18
+================================================================
+Revenue: $9.00 | Avg satisfaction (paid): 84.0
+Waiting queue: C2(Regular, 84)
+Tables: T1: free   T2: free
+Customers:
+  C1   Regular  sat  84  PAID
+  C2   Regular  sat  84  WAITING
+Orders:
+  O1   C1   Salad                        PAID       units 1/1  price $9.00
+Staff tasks available:
+  Waiter (1 task):  seat C2(Regular, 84) at T1, T2 | take order (none) | serve (none)
+  Chef (1 unit):    advance (none)
+  Cashier (auto):   nobody to charge
+Waiter: 1) Seat a queued customer  2) Take an order  3) Serve a READY order  0) Wait
+Waiter choice: 0
+  * Waiter waits this turn.
+Chef: 1) Advance an order by one unit  0) Wait
+Chef choice: 0
+  * Chef waits this turn.
+-- Eating, payment, waiting --
+  * Cashier: nobody is ready to pay.
+  * C2 (WAITING) waits: satisfaction 84 -> 76.
+-- End of turn 6 --
+Served: 1 | Unhappy departures: 0 | Paid: 1 | Revenue: $9.00 | Avg satisfaction (paid): 84.0 | Turns used: 6/18
+
+================================================================
+ TURN 7 / 18
+================================================================
+  * C3 (Regular) arrives and joins the waiting queue with satisfaction 100.
+Revenue: $9.00 | Avg satisfaction (paid): 84.0
+Waiting queue: C2(Regular, 76), C3(Regular, 100)
+Tables: T1: free   T2: free
+Customers:
+  C1   Regular  sat  84  PAID
+  C2   Regular  sat  76  WAITING
+  C3   Regular  sat 100  WAITING
+Orders:
+  O1   C1   Salad                        PAID       units 1/1  price $9.00
+Staff tasks available:
+  Waiter (1 task):  seat C2(Regular, 76), C3(Regular, 100) at T1, T2 | take order (none) | serve (none)
+  Chef (1 unit):    advance (none)
+  Cashier (auto):   nobody to charge
+Waiter: 1) Seat a queued customer  2) Take an order  3) Serve a READY order  0) Wait
+Waiter choice: 0
+  * Waiter waits this turn.
+Chef: 1) Advance an order by one unit  0) Wait
+Chef choice: 0
+  * Chef waits this turn.
+-- Eating, payment, waiting --
+  * Cashier: nobody is ready to pay.
+  * C2 (WAITING) waits: satisfaction 76 -> 68.
+  * C3 (WAITING) waits: satisfaction 100 -> 92.
+-- End of turn 7 --
+Served: 1 | Unhappy departures: 0 | Paid: 1 | Revenue: $9.00 | Avg satisfaction (paid): 84.0 | Turns used: 7/18
+
+================================================================
+ TURN 8 / 18
+================================================================
+Revenue: $9.00 | Avg satisfaction (paid): 84.0
+Waiting queue: C2(Regular, 68), C3(Regular, 92)
+Tables: T1: free   T2: free
+Customers:
+  C1   Regular  sat  84  PAID
+  C2   Regular  sat  68  WAITING
+  C3   Regular  sat  92  WAITING
+Orders:
+  O1   C1   Salad                        PAID       units 1/1  price $9.00
+Staff tasks available:
+  Waiter (1 task):  seat C2(Regular, 68), C3(Regular, 92) at T1, T2 | take order (none) | serve (none)
+  Chef (1 unit):    advance (none)
+  Cashier (auto):   nobody to charge
+Waiter: 1) Seat a queued customer  2) Take an order  3) Serve a READY order  0) Wait
+Waiter choice: 
+[input ended - defaulting to Wait]
+Waiter choice: 0
+  * Waiter waits this turn.
+Chef: 1) Advance an order by one unit  0) Wait
+Chef choice: 0
+  * Chef waits this turn.
+-- Eating, payment, waiting --
+  * Cashier: nobody is ready to pay.
+  * C2 (WAITING) waits: satisfaction 68 -> 60.
+  * C3 (WAITING) waits: satisfaction 92 -> 84.
+-- End of turn 8 --
+Served: 1 | Unhappy departures: 0 | Paid: 1 | Revenue: $9.00 | Avg satisfaction (paid): 84.0 | Turns used: 8/18
+
+================================================================
+ TURN 9 / 18
+================================================================
+Revenue: $9.00 | Avg satisfaction (paid): 84.0
+Waiting queue: C2(Regular, 60), C3(Regular, 84)
+Tables: T1: free   T2: free
+Customers:
+  C1   Regular  sat  84  PAID
+  C2   Regular  sat  60  WAITING
+  C3   Regular  sat  84  WAITING
+Orders:
+  O1   C1   Salad                        PAID       units 1/1  price $9.00
+Staff tasks available:
+  Waiter (1 task):  seat C2(Regular, 60), C3(Regular, 84) at T1, T2 | take order (none) | serve (none)
+  Chef (1 unit):    advance (none)
+  Cashier (auto):   nobody to charge
+Waiter: 1) Seat a queued customer  2) Take an order  3) Serve a READY order  0) Wait
+Waiter choice: 0
+  * Waiter waits this turn.
+Chef: 1) Advance an order by one unit  0) Wait
+Chef choice: 0
+  * Chef waits this turn.
+-- Eating, payment, waiting --
+  * Cashier: nobody is ready to pay.
+  * C2 (WAITING) waits: satisfaction 60 -> 52.
+  * C3 (WAITING) waits: satisfaction 84 -> 76.
+-- End of turn 9 --
+Served: 1 | Unhappy departures: 0 | Paid: 1 | Revenue: $9.00 | Avg satisfaction (paid): 84.0 | Turns used: 9/18
+
+================================================================
+ TURN 10 / 18
+================================================================
+  * C4 (Regular) arrives and joins the waiting queue with satisfaction 100.
+Revenue: $9.00 | Avg satisfaction (paid): 84.0
+Waiting queue: C2(Regular, 52), C3(Regular, 76), C4(Regular, 100)
+Tables: T1: free   T2: free
+Customers:
+  C1   Regular  sat  84  PAID
+  C2   Regular  sat  52  WAITING
+  C3   Regular  sat  76  WAITING
+  C4   Regular  sat 100  WAITING
+Orders:
+  O1   C1   Salad                        PAID       units 1/1  price $9.00
+Staff tasks available:
+  Waiter (1 task):  seat C2(Regular, 52), C3(Regular, 76), C4(Regular, 100) at T1, T2 | take order (none) | serve (none)
+  Chef (1 unit):    advance (none)
+  Cashier (auto):   nobody to charge
+Waiter: 1) Seat a queued customer  2) Take an order  3) Serve a READY order  0) Wait
+Waiter choice: 0
+  * Waiter waits this turn.
+Chef: 1) Advance an order by one unit  0) Wait
+Chef choice: 0
+  * Chef waits this turn.
+-- Eating, payment, waiting --
+  * Cashier: nobody is ready to pay.
+  * C2 (WAITING) waits: satisfaction 52 -> 44.
+  * C3 (WAITING) waits: satisfaction 76 -> 68.
+  * C4 (WAITING) waits: satisfaction 100 -> 92.
+-- End of turn 10 --
+Served: 1 | Unhappy departures: 0 | Paid: 1 | Revenue: $9.00 | Avg satisfaction (paid): 84.0 | Turns used: 10/18
+
+================================================================
+ TURN 11 / 18
+================================================================
+Revenue: $9.00 | Avg satisfaction (paid): 84.0
+Waiting queue: C2(Regular, 44), C3(Regular, 68), C4(Regular, 92)
+Tables: T1: free   T2: free
+Customers:
+  C1   Regular  sat  84  PAID
+  C2   Regular  sat  44  WAITING
+  C3   Regular  sat  68  WAITING
+  C4   Regular  sat  92  WAITING
+Orders:
+  O1   C1   Salad                        PAID       units 1/1  price $9.00
+Staff tasks available:
+  Waiter (1 task):  seat C2(Regular, 44), C3(Regular, 68), C4(Regular, 92) at T1, T2 | take order (none) | serve (none)
+  Chef (1 unit):    advance (none)
+  Cashier (auto):   nobody to charge
+Waiter: 1) Seat a queued customer  2) Take an order  3) Serve a READY order  0) Wait
+Waiter choice: 0
+  * Waiter waits this turn.
+Chef: 1) Advance an order by one unit  0) Wait
+Chef choice: 0
+  * Chef waits this turn.
+-- Eating, payment, waiting --
+  * Cashier: nobody is ready to pay.
+  * C2 (WAITING) waits: satisfaction 44 -> 36.
+  * C3 (WAITING) waits: satisfaction 68 -> 60.
+  * C4 (WAITING) waits: satisfaction 92 -> 84.
+-- End of turn 11 --
+Served: 1 | Unhappy departures: 0 | Paid: 1 | Revenue: $9.00 | Avg satisfaction (paid): 84.0 | Turns used: 11/18
+
+================================================================
+ TURN 12 / 18
+================================================================
+Revenue: $9.00 | Avg satisfaction (paid): 84.0
+Waiting queue: C2(Regular, 36), C3(Regular, 60), C4(Regular, 84)
+Tables: T1: free   T2: free
+Customers:
+  C1   Regular  sat  84  PAID
+  C2   Regular  sat  36  WAITING
+  C3   Regular  sat  60  WAITING
+  C4   Regular  sat  84  WAITING
+Orders:
+  O1   C1   Salad                        PAID       units 1/1  price $9.00
+Staff tasks available:
+  Waiter (1 task):  seat C2(Regular, 36), C3(Regular, 60), C4(Regular, 84) at T1, T2 | take order (none) | serve (none)
+  Chef (1 unit):    advance (none)
+  Cashier (auto):   nobody to charge
+Waiter: 1) Seat a queued customer  2) Take an order  3) Serve a READY order  0) Wait
+Waiter choice: 0
+  * Waiter waits this turn.
+Chef: 1) Advance an order by one unit  0) Wait
+Chef choice: 0
+  * Chef waits this turn.
+-- Eating, payment, waiting --
+  * Cashier: nobody is ready to pay.
+  * C2 (WAITING) waits: satisfaction 36 -> 28.
+  * C3 (WAITING) waits: satisfaction 60 -> 52.
+  * C4 (WAITING) waits: satisfaction 84 -> 76.
+-- End of turn 12 --
+Served: 1 | Unhappy departures: 0 | Paid: 1 | Revenue: $9.00 | Avg satisfaction (paid): 84.0 | Turns used: 12/18
+
+================================================================
+ TURN 13 / 18
+================================================================
+  * C5 (Regular) arrives and joins the waiting queue with satisfaction 100.
+Revenue: $9.00 | Avg satisfaction (paid): 84.0
+Waiting queue: C2(Regular, 28), C3(Regular, 52), C4(Regular, 76), C5(Regular, 100)
+Tables: T1: free   T2: free
+Customers:
+  C1   Regular  sat  84  PAID
+  C2   Regular  sat  28  WAITING
+  C3   Regular  sat  52  WAITING
+  C4   Regular  sat  76  WAITING
+  C5   Regular  sat 100  WAITING
+Orders:
+  O1   C1   Salad                        PAID       units 1/1  price $9.00
+Staff tasks available:
+  Waiter (1 task):  seat C2(Regular, 28), C3(Regular, 52), C4(Regular, 76), C5(Regular, 100) at T1, T2 | take order (none) | serve (none)
+  Chef (1 unit):    advance (none)
+  Cashier (auto):   nobody to charge
+Waiter: 1) Seat a queued customer  2) Take an order  3) Serve a READY order  0) Wait
+Waiter choice: 0
+  * Waiter waits this turn.
+Chef: 1) Advance an order by one unit  0) Wait
+Chef choice: 0
+  * Chef waits this turn.
+-- Eating, payment, waiting --
+  * Cashier: nobody is ready to pay.
+  * C2 (WAITING) waits: satisfaction 28 -> 20.
+  * C3 (WAITING) waits: satisfaction 52 -> 44.
+  * C4 (WAITING) waits: satisfaction 76 -> 68.
+  * C5 (WAITING) waits: satisfaction 100 -> 92.
+-- End of turn 13 --
+Served: 1 | Unhappy departures: 0 | Paid: 1 | Revenue: $9.00 | Avg satisfaction (paid): 84.0 | Turns used: 13/18
+
+================================================================
+ TURN 14 / 18
+================================================================
+Revenue: $9.00 | Avg satisfaction (paid): 84.0
+Waiting queue: C2(Regular, 20), C3(Regular, 44), C4(Regular, 68), C5(Regular, 92)
+Tables: T1: free   T2: free
+Customers:
+  C1   Regular  sat  84  PAID
+  C2   Regular  sat  20  WAITING
+  C3   Regular  sat  44  WAITING
+  C4   Regular  sat  68  WAITING
+  C5   Regular  sat  92  WAITING
+Orders:
+  O1   C1   Salad                        PAID       units 1/1  price $9.00
+Staff tasks available:
+  Waiter (1 task):  seat C2(Regular, 20), C3(Regular, 44), C4(Regular, 68), C5(Regular, 92) at T1, T2 | take order (none) | serve (none)
+  Chef (1 unit):    advance (none)
+  Cashier (auto):   nobody to charge
+Waiter: 1) Seat a queued customer  2) Take an order  3) Serve a READY order  0) Wait
+Waiter choice: 0
+  * Waiter waits this turn.
+Chef: 1) Advance an order by one unit  0) Wait
+Chef choice: 0
+  * Chef waits this turn.
+-- Eating, payment, waiting --
+  * Cashier: nobody is ready to pay.
+  * C2 (WAITING) waits: satisfaction 20 -> 12.
+  * C3 (WAITING) waits: satisfaction 44 -> 36.
+  * C4 (WAITING) waits: satisfaction 68 -> 60.
+  * C5 (WAITING) waits: satisfaction 92 -> 84.
+-- End of turn 14 --
+Served: 1 | Unhappy departures: 0 | Paid: 1 | Revenue: $9.00 | Avg satisfaction (paid): 84.0 | Turns used: 14/18
+
+================================================================
+ TURN 15 / 18
+================================================================
+Revenue: $9.00 | Avg satisfaction (paid): 84.0
+Waiting queue: C2(Regular, 12), C3(Regular, 36), C4(Regular, 60), C5(Regular, 84)
+Tables: T1: free   T2: free
+Customers:
+  C1   Regular  sat  84  PAID
+  C2   Regular  sat  12  WAITING
+  C3   Regular  sat  36  WAITING
+  C4   Regular  sat  60  WAITING
+  C5   Regular  sat  84  WAITING
+Orders:
+  O1   C1   Salad                        PAID       units 1/1  price $9.00
+Staff tasks available:
+  Waiter (1 task):  seat C2(Regular, 12), C3(Regular, 36), C4(Regular, 60), C5(Regular, 84) at T1, T2 | take order (none) | serve (none)
+  Chef (1 unit):    advance (none)
+  Cashier (auto):   nobody to charge
+Waiter: 1) Seat a queued customer  2) Take an order  3) Serve a READY order  0) Wait
+Waiter choice: 0
+  * Waiter waits this turn.
+Chef: 1) Advance an order by one unit  0) Wait
+Chef choice: 0
+  * Chef waits this turn.
+-- Eating, payment, waiting --
+  * Cashier: nobody is ready to pay.
+  * C2 (WAITING) waits: satisfaction 12 -> 4.
+  * C3 (WAITING) waits: satisfaction 36 -> 28.
+  * C4 (WAITING) waits: satisfaction 60 -> 52.
+  * C5 (WAITING) waits: satisfaction 84 -> 76.
+-- End of turn 15 --
+Served: 1 | Unhappy departures: 0 | Paid: 1 | Revenue: $9.00 | Avg satisfaction (paid): 84.0 | Turns used: 15/18
+
+================================================================
+ TURN 16 / 18
+================================================================
+  * C6 (Regular) arrives and joins the waiting queue with satisfaction 100.
+Revenue: $9.00 | Avg satisfaction (paid): 84.0
+Waiting queue: C2(Regular, 4), C3(Regular, 28), C4(Regular, 52), C5(Regular, 76), C6(Regular, 100)
+Tables: T1: free   T2: free
+Customers:
+  C1   Regular  sat  84  PAID
+  C2   Regular  sat   4  WAITING
+  C3   Regular  sat  28  WAITING
+  C4   Regular  sat  52  WAITING
+  C5   Regular  sat  76  WAITING
+  C6   Regular  sat 100  WAITING
+Orders:
+  O1   C1   Salad                        PAID       units 1/1  price $9.00
+Staff tasks available:
+  Waiter (1 task):  seat C2(Regular, 4), C3(Regular, 28), C4(Regular, 52), C5(Regular, 76), C6(Regular, 100) at T1, T2 | take order (none) | serve (none)
+  Chef (1 unit):    advance (none)
+  Cashier (auto):   nobody to charge
+Waiter: 1) Seat a queued customer  2) Take an order  3) Serve a READY order  0) Wait
+Waiter choice: 0
+  * Waiter waits this turn.
+Chef: 1) Advance an order by one unit  0) Wait
+Chef choice: 0
+  * Chef waits this turn.
+-- Eating, payment, waiting --
+  * Cashier: nobody is ready to pay.
+  * C2 (WAITING) waits: satisfaction 4 -> 0.
+  * C3 (WAITING) waits: satisfaction 28 -> 20.
+  * C4 (WAITING) waits: satisfaction 52 -> 44.
+  * C5 (WAITING) waits: satisfaction 76 -> 68.
+  * C6 (WAITING) waits: satisfaction 100 -> 92.
+  * C2 (Regular) leaves unhappy without paying.
+-- End of turn 16 --
+Served: 1 | Unhappy departures: 1 | Paid: 1 | Revenue: $9.00 | Avg satisfaction (paid): 84.0 | Turns used: 16/18
+
+================================================================
+ TURN 17 / 18
+================================================================
+Revenue: $9.00 | Avg satisfaction (paid): 84.0
+Waiting queue: C3(Regular, 20), C4(Regular, 44), C5(Regular, 68), C6(Regular, 92)
+Tables: T1: free   T2: free
+Customers:
+  C1   Regular  sat  84  PAID
+  C2   Regular  sat   0  LEFT
+  C3   Regular  sat  20  WAITING
+  C4   Regular  sat  44  WAITING
+  C5   Regular  sat  68  WAITING
+  C6   Regular  sat  92  WAITING
+Orders:
+  O1   C1   Salad                        PAID       units 1/1  price $9.00
+Staff tasks available:
+  Waiter (1 task):  seat C3(Regular, 20), C4(Regular, 44), C5(Regular, 68), C6(Regular, 92) at T1, T2 | take order (none) | serve (none)
+  Chef (1 unit):    advance (none)
+  Cashier (auto):   nobody to charge
+Waiter: 1) Seat a queued customer  2) Take an order  3) Serve a READY order  0) Wait
+Waiter choice: 0
+  * Waiter waits this turn.
+Chef: 1) Advance an order by one unit  0) Wait
+Chef choice: 0
+  * Chef waits this turn.
+-- Eating, payment, waiting --
+  * Cashier: nobody is ready to pay.
+  * C3 (WAITING) waits: satisfaction 20 -> 12.
+  * C4 (WAITING) waits: satisfaction 44 -> 36.
+  * C5 (WAITING) waits: satisfaction 68 -> 60.
+  * C6 (WAITING) waits: satisfaction 92 -> 84.
+-- End of turn 17 --
+Served: 1 | Unhappy departures: 1 | Paid: 1 | Revenue: $9.00 | Avg satisfaction (paid): 84.0 | Turns used: 17/18
+
+================================================================
+ TURN 18 / 18
+================================================================
+Revenue: $9.00 | Avg satisfaction (paid): 84.0
+Waiting queue: C3(Regular, 12), C4(Regular, 36), C5(Regular, 60), C6(Regular, 84)
+Tables: T1: free   T2: free
+Customers:
+  C1   Regular  sat  84  PAID
+  C2   Regular  sat   0  LEFT
+  C3   Regular  sat  12  WAITING
+  C4   Regular  sat  36  WAITING
+  C5   Regular  sat  60  WAITING
+  C6   Regular  sat  84  WAITING
+Orders:
+  O1   C1   Salad                        PAID       units 1/1  price $9.00
+Staff tasks available:
+  Waiter (1 task):  seat C3(Regular, 12), C4(Regular, 36), C5(Regular, 60), C6(Regular, 84) at T1, T2 | take order (none) | serve (none)
+  Chef (1 unit):    advance (none)
+  Cashier (auto):   nobody to charge
+Waiter: 1) Seat a queued customer  2) Take an order  3) Serve a READY order  0) Wait
+Waiter choice: 0
+  * Waiter waits this turn.
+Chef: 1) Advance an order by one unit  0) Wait
+Chef choice: 0
+  * Chef waits this turn.
+-- Eating, payment, waiting --
+  * Cashier: nobody is ready to pay.
+  * C3 (WAITING) waits: satisfaction 12 -> 4.
+  * C4 (WAITING) waits: satisfaction 36 -> 28.
+  * C5 (WAITING) waits: satisfaction 60 -> 52.
+  * C6 (WAITING) waits: satisfaction 84 -> 76.
+-- End of turn 18 --
+Served: 1 | Unhappy departures: 1 | Paid: 1 | Revenue: $9.00 | Avg satisfaction (paid): 84.0 | Turns used: 18/18
+
+================================================================
+ FINAL RESULT after 18 turns
+================================================================
+Paid customers:       1 (need >= 4) NOT MET
+Revenue:              $9.00 (need >= $45.00) NOT MET
+Average satisfaction: 84.0 (need >= 60) MET
+RESULT: DEFEAT

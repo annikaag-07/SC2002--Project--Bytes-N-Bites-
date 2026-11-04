@@ -1,0 +1,12 @@
+/** Rotating tips shown on the loading screen and main menu. Add more freely. */
+export const TIPS: string[] = [
+  "A dish finished this turn can only be served next turn. Plan one turn ahead!",
+  "A served guest eats for one full turn, then is ready to pay. The Cashier charges them at the end of the turn after that.",
+  "A guest who is ready to pay still holds their table until the Cashier charges them at the end of the turn.",
+  "The Cashier charges one guest per turn, oldest first. If two are ready at once, one waits a turn.",
+  "Every guest needs the Waiter three times: seat, take the order, serve. Don't waste Waiter turns!",
+  "Satisfaction below 60? Watch for the anger marks above their head!",
+  "You need 4 paying customers, $45 and an average satisfaction of 60 to win.",
+  "The guest arriving on turn 16 can never pay in time. Focus on the others!",
+  "Waiter tip: choose the job first, then pick the table. Keys A-D and 1-2 work too!",
+];

@@ -1,0 +1,10 @@
+# Build output and local data (never committed). The built front end, restaurant-rush-app/client/dist/,
+# is committed on purpose so the game runs with only a JDK: it is force-added.
+node_modules/
+out/
+out-test/
+data/
+*.class
+sources.txt
+.DS_Store
+verification/

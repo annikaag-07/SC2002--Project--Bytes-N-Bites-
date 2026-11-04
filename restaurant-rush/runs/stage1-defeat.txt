@@ -1,0 +1,37 @@
+# Stage 1 defeat run. Command: ./run.sh --seed 2002 < runs/stage1-defeat.txt
+# Strategy: a careless manager. It tries some invalid commands (each one is rejected with a reason
+# and the same staff member is asked again, with no task used up), serves C1 only, then lets the
+# kitchen and floor idle while customers lose patience and leave.
+# --- Turn 1: invalid: serve an order that does not exist. Then an out-of-range menu number.
+3
+O1
+7
+# valid: seat C1. Chef: invalid (no orders yet), then Wait.
+1
+C1
+T1
+1
+O1
+0
+# --- Turn 2: take C1's order (Salad). Chef: non-numeric input is rejected, then cooks O1.
+2
+C1
+abc
+1
+O1
+# --- Turn 3: invalid: try to seat C1 again (already seated). Then serve O1.
+1
+C1
+T2
+3
+O1
+0
+# --- Turns 4 onward: the manager only waits; everyone else eventually leaves unhappy.
+0
+0
+0
+0
+0
+0
+0
+0

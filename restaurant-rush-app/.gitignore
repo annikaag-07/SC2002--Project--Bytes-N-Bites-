@@ -1,0 +1,8 @@
+server/out/
+server/out-test/
+client/node_modules/
+client/dist/
+data/
+.DS_Store
+data-test/
+sources.txt

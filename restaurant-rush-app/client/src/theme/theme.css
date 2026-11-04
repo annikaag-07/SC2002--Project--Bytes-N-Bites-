@@ -1,0 +1,362 @@
+/*
+ * THEME FILE - change the whole look of Bytes N Bites from here.
+ * Every colour and font is a CSS variable. The pixel sprites read these too (fill="var(--...)"), so changing
+ * --shirt-regular recolours every customer, --table-check every table, and so on.
+ */
+:root,
+[data-theme="neon"] {
+  /* Fonts: chunky pixel font for titles/buttons, terminal pixel font for text */
+  --font-display: "Press Start 2P", ui-monospace, monospace;
+  --font-body: "VT323", ui-monospace, monospace;
+
+  /* Page and frame */
+  --page-bg: #15102a;
+  --page-bg-2: #0d0a1c;
+  --page-star: rgb(255 255 255 / 0.55);
+  --frame: #ff4fa3;
+  --frame-glow: rgb(255 79 163 / 0.55);
+  --frame-inner: #0e0b1d;
+
+  /* Panels and text */
+  --panel: #1d1736;
+  --panel-2: #241c42;
+  --panel-border: #3b3166;
+  --ink: #e9e6ff;
+  --ink-soft: #a79fd0;
+  --ink-dim: #6f679a;
+
+  /* Accents */
+  --teal: #6ee7c8;
+  --teal-dark: #2fae90;
+  --teal-ink: #10221f;
+  --pink: #ff6ac1;
+  --pink-glow: rgb(255 106 193 / 0.7);
+  --yellow: #f7c948;
+  --danger: #ff5d73;
+  --success: #6ee77d;
+
+  /* Outside (rain) */
+  --outside: #1c1a3a;
+  --outside-2: #262051;
+  --rain: rgb(170 160 255 / 0.18);
+  --street-glow: rgb(255 79 163 / 0.35);
+
+  /* Kitchen */
+  --kitchen-wall: #2a2348;
+  --kitchen-wall-2: #312858;
+  --rail: #8c88b0;
+  --counter: #9aa0bd;
+  --counter-dark: #6c7190;
+  --ticket: #fff6d8;
+
+  /* Sign band and dining room */
+  --sign-band: #2b2050;
+  --sign: #ff8fd2;
+  --floor-a: #3b2f6b;
+  --floor-b: #33285e;
+  --wall-line: #4a3c80;
+  --lamp: #ff5b6e;
+  --lamp-glow: rgb(255 120 140 / 0.28);
+  --door: #8a5a36;
+  --door-dark: #5e3b22;
+
+  /* Tables */
+  --table-check: #e8364f;
+  --table-check-2: #f5f0f5;
+  --table-rim: #a3243a;
+  --table-leg: #8b8fae;
+
+  /* People */
+  --outline: #140f26;
+  --mouth: #7a2a3a;
+  --pants: #2c2f4a;
+  --shoes: #140f26;
+  --anger: #ff3b4e;
+
+  /* Customer shirts (by type) */
+  --shirt-regular: #43b65a;
+
+  /* Staff uniforms */
+  --chef-jacket: #f4f4f4;
+  --chef-scarf: #e8364f;
+  --waiter-vest: #1f2333;
+  --waiter-shirt: #f4f4f4;
+  --manager-suit: #2fae90;
+  --manager-tie: #ff6ac1;
+  --cashier-shirt: #43b65a;
+  --tray: #c9cde0;
+
+  /* Penguin skin */
+  --penguin-body: #252a44;
+  --penguin-belly: #f4f4f4;
+  --penguin-beak: #ffb02e;
+
+  /* Satisfaction bar */
+  --meter-good: #6ee77d;
+  --meter-ok: #f7c948;
+  --meter-bad: #ff5d73;
+  --meter-track: #120e24;
+
+  /* ---- theme surfaces (Neon Nights) ---- */
+  --stage-bg:
+    radial-gradient(var(--page-star) 1px, transparent 1.5px) 0 0 / 38px 38px,
+    radial-gradient(rgb(255 255 255 / 0.25) 1px, transparent 1.5px) 19px 21px / 38px 38px,
+    linear-gradient(180deg, var(--page-bg), var(--page-bg-2));
+  --menu-bg:
+    radial-gradient(var(--page-star) 1px, transparent 1.5px) 0 0 / 44px 44px,
+    linear-gradient(180deg, #2a1f55 0%, #1a1438 60%, #120e26 100%);
+  --outside-bg:
+    radial-gradient(ellipse 80% 20% at 50% 100%, var(--street-glow), transparent 70%),
+    linear-gradient(180deg, var(--outside), var(--outside-2));
+  --kitchen-bg:
+    repeating-linear-gradient(90deg, transparent 0 46px, rgb(255 255 255 / 0.03) 46px 48px),
+    linear-gradient(180deg, var(--kitchen-wall-2), var(--kitchen-wall));
+  --floor-bg: conic-gradient(var(--floor-a) 25%, var(--floor-b) 0 50%, var(--floor-a) 0 75%, var(--floor-b) 0) 0 0 / 52px 52px;
+  --sign-bg: var(--sign-band);
+  --sign-glow: 0 0 5px var(--pink), 0 0 14px var(--pink-glow), 0 0 28px var(--pink-glow);
+  --ambient: radial-gradient(ellipse at 50% 0%, rgb(140 90 255 / 0.12), transparent 70%);
+  --title-top: var(--teal);
+  --title-top-glow: 0 0 8px rgb(110 231 200 / 0.7), 0 0 22px rgb(110 231 200 / 0.35);
+  --title-big: #ff9ad8;
+  --portrait-a: #2c2556;
+  --portrait-b: #1d1736;
+  --selected-bg: #3b2e7a;
+  --selected-border: #6c5bd0;
+  --tag-bg: #f5f0f5;
+  --tag-ink: #1d1736;
+  --ticket-ink: #2b2240;
+  --kitchen-ink: var(--ink-soft);
+  --door-window: #9fd6ff;
+  --door-handle: #f7c948;
+  --stove-body: #8c90ad;
+  --stove-frame: #3a3a52;
+  --stove-inner: #5d6180;
+  --burner: #ff8a2a;
+  --lamp-cord: #55507a;
+  --lamp-light: #ffe9a8;
+  /* tables: dark glass with a neon rim */
+  --table-top: #1b2244;
+  --table-top-2: #3d5c9e;
+  --table-rim: #ff4fd8;
+  --table-gold: #6ee7ff;
+  --table-glow: drop-shadow(0 0 3px rgb(255 79 216 / 0.85)) drop-shadow(0 0 8px rgb(110 231 255 / 0.35));
+  /* chairs */
+  --chair-frame: #2b2f52;
+  --chair-seat: #3d4374;
+  --chair-accent: #6ee7ff;
+  --prop-glow: drop-shadow(0 0 3px rgb(255 79 216 / 0.7));
+  /* cashier booth */
+  --booth-body: #18213f;
+  --booth-shade: #111832;
+  --booth-top: #2b3666;
+  --booth-trim: #6ee7ff;
+  --booth-trim-2: #ff4fd8;
+  /* waiter menus */
+  --menu-cover: #1b2244;
+  --menu-trim: #ff4fd8;
+  --menu-ink: #6ee7ff;
+}
+
+/* ====================================================================== Cozy Café */
+[data-theme="cafe"] {
+  --page-bg: #2a1c14;
+  --page-bg-2: #160e09;
+  --page-star: rgb(255 214 160 / 0.32);
+  --frame: #d9a05b;
+  --frame-glow: rgb(217 160 91 / 0.45);
+  --frame-inner: #1f150f;
+  --panel: #3a281d;
+  --panel-2: #4a3325;
+  --panel-border: #7a5538;
+  --ink: #fff3dc;
+  --ink-soft: #e2c9a3;
+  --ink-dim: #a68867;
+  --teal: #f2c66d;
+  --teal-dark: #c9963f;
+  --teal-ink: #2a1c10;
+  --pink: #e8896c;
+  --pink-glow: rgb(232 137 108 / 0.5);
+  --yellow: #f7d070;
+  --danger: #ff8a7a;
+  --success: #a8d672;
+  --outside: #3d2b3a;
+  --outside-2: #6a4436;
+  --rain: rgb(255 228 190 / 0.12);
+  --street-glow: rgb(255 190 110 / 0.4);
+  --kitchen-wall: #eadcc1;
+  --kitchen-wall-2: #f5ead4;
+  --rail: #8a6a4a;
+  --counter: #c8955f;
+  --counter-dark: #7f5230;
+  --ticket: #fffaf0;
+  --sign-band: #6b4426;
+  --sign: #fff3dc;
+  --floor-a: #a8743f;
+  --floor-b: #8f5f30;
+  --wall-line: #5a3a22;
+  --lamp: #d9a441;
+  --lamp-glow: rgb(255 200 110 / 0.38);
+  --door: #a0683a;
+  --door-dark: #6b4426;
+  --meter-track: #24170f;
+
+  --stage-bg:
+    radial-gradient(var(--page-star) 1px, transparent 1.5px) 0 0 / 38px 38px,
+    linear-gradient(180deg, #3a2618, #160e09);
+  --menu-bg:
+    radial-gradient(rgb(255 214 160 / 0.18) 1px, transparent 1.5px) 0 0 / 44px 44px,
+    radial-gradient(ellipse at 50% 30%, rgb(255 190 110 / 0.18), transparent 60%),
+    linear-gradient(180deg, #4a3020 0%, #2e1f15 60%, #1f150f 100%);
+  --outside-bg:
+    radial-gradient(ellipse 90% 25% at 50% 100%, var(--street-glow), transparent 70%),
+    linear-gradient(180deg, var(--outside), var(--outside-2));
+  --kitchen-bg:
+    linear-gradient(90deg, rgb(120 90 60 / 0.16) 1px, transparent 1px) 0 0 / 22px 22px,
+    linear-gradient(0deg, rgb(120 90 60 / 0.16) 1px, transparent 1px) 0 0 / 22px 22px,
+    linear-gradient(180deg, var(--kitchen-wall-2), var(--kitchen-wall));
+  --floor-bg:
+    repeating-linear-gradient(90deg, transparent 0 158px, rgb(60 34 14 / 0.45) 158px 160px),
+    repeating-linear-gradient(0deg, var(--floor-a) 0 22px, var(--floor-b) 22px 24px, #9b6936 24px 46px, #6e4422 46px 48px);
+  --sign-bg: linear-gradient(180deg, #7a4f2c, #5e3b20);
+  --sign-glow: 0 0 6px rgb(255 205 130 / 0.55);
+  --ambient: radial-gradient(ellipse at 50% 0%, rgb(255 200 120 / 0.18), transparent 70%);
+  --title-top: #f2c66d;
+  --title-top-glow: 0 0 8px rgb(242 198 109 / 0.6);
+  --title-big: #fff3dc;
+  --portrait-a: #5a3d2a;
+  --portrait-b: #3a281d;
+  --selected-bg: #5a3d2a;
+  --selected-border: #c9963f;
+  --tag-bg: #fff8ea;
+  --tag-ink: #3a2414;
+  --ticket-ink: #3a2414;
+  --kitchen-ink: #6e4a2c;
+  --door-window: #ffe2a8;
+  --door-handle: #e8c06a;
+  --stove-body: #e6dac2;
+  --stove-frame: #6e5a44;
+  --stove-inner: #4a3a2c;
+  --burner: #ff8a2a;
+  --lamp-cord: #4a3020;
+  --lamp-light: #fff0c2;
+  --table-top: #b57d47;
+  --table-top-2: #9a6638;
+  --table-rim: #6e4424;
+  --table-gold: #d9a441;
+  --table-leg: #5a3a22;
+  --table-glow: drop-shadow(0 2px 0 rgb(40 22 10 / 0.35));
+  --chair-frame: #7a4f2a;
+  --chair-seat: #f3e3c3;
+  --chair-accent: #a8743f;
+  --prop-glow: drop-shadow(0 2px 0 rgb(40 22 10 / 0.35));
+  --booth-body: #8a5a36;
+  --booth-shade: #6e4424;
+  --booth-top: #f3e3c3;
+  --booth-trim: #5a3a22;
+  --booth-trim-2: #d9a441;
+  --menu-cover: #6b4426;
+  --menu-trim: #f3e3c3;
+  --menu-ink: #f3e3c3;
+}
+
+/* ====================================================================== Tokyo Diner */
+[data-theme="tokyo"] {
+  --page-bg: #1a0f0c;
+  --page-bg-2: #0d0605;
+  --page-star: rgb(255 196 150 / 0.28);
+  --frame: #d7263d;
+  --frame-glow: rgb(215 38 61 / 0.5);
+  --frame-inner: #140b08;
+  --panel: #24150f;
+  --panel-2: #321d14;
+  --panel-border: #6b3a26;
+  --ink: #f7ead2;
+  --ink-soft: #dcc199;
+  --ink-dim: #9a7a58;
+  --teal: #e6b422;
+  --teal-dark: #b38712;
+  --teal-ink: #24150f;
+  --pink: #f05a4f;
+  --pink-glow: rgb(240 90 79 / 0.55);
+  --yellow: #f2c94c;
+  --danger: #ff7266;
+  --success: #9bd88f;
+  --outside: #1c1220;
+  --outside-2: #2e1518;
+  --rain: rgb(255 180 160 / 0.14);
+  --street-glow: rgb(232 71 61 / 0.45);
+  --kitchen-wall: #3a2418;
+  --kitchen-wall-2: #4a2e1e;
+  --rail: #c9a36a;
+  --counter: #7a4b2c;
+  --counter-dark: #3a2418;
+  --ticket: #f7ead2;
+  --sign-band: #b3202f;
+  --sign: #f2c94c;
+  --floor-a: #c9b27a;
+  --floor-b: #b89f66;
+  --wall-line: #3a2418;
+  --lamp: #e8473d;
+  --lamp-glow: rgb(255 140 90 / 0.36);
+  --door: #efe3c6;
+  --door-dark: #3a2418;
+  --meter-track: #120a06;
+
+  --stage-bg:
+    radial-gradient(var(--page-star) 1px, transparent 1.5px) 0 0 / 38px 38px,
+    radial-gradient(ellipse at 50% 110%, rgb(215 38 61 / 0.25), transparent 60%),
+    linear-gradient(180deg, #1a0f0c, #0d0605);
+  --menu-bg:
+    radial-gradient(rgb(255 196 150 / 0.16) 1px, transparent 1.5px) 0 0 / 44px 44px,
+    radial-gradient(ellipse at 50% 100%, rgb(215 38 61 / 0.3), transparent 60%),
+    linear-gradient(180deg, #2a1410 0%, #1a0d0a 60%, #120806 100%);
+  --outside-bg:
+    radial-gradient(ellipse 90% 30% at 50% 100%, var(--street-glow), transparent 70%),
+    linear-gradient(180deg, var(--outside), var(--outside-2));
+  --kitchen-bg:
+    repeating-linear-gradient(90deg, #4a2e1e 0 18px, #3a2418 18px 20px);
+  --floor-bg:
+    linear-gradient(90deg, #3a2418 0 3px, transparent 3px) 0 0 / 104px 52px,
+    linear-gradient(0deg, #3a2418 0 3px, transparent 3px) 0 0 / 104px 52px,
+    repeating-linear-gradient(90deg, var(--floor-a) 0 4px, var(--floor-b) 4px 6px);
+  --sign-bg: linear-gradient(180deg, #c8283f, #9a1a28);
+  --sign-glow: 0 0 6px rgb(242 201 76 / 0.6);
+  --ambient: radial-gradient(ellipse at 50% 0%, rgb(255 120 80 / 0.14), transparent 70%);
+  --title-top: #f2c94c;
+  --title-top-glow: 0 0 8px rgb(242 201 76 / 0.55);
+  --title-big: #ff7a6b;
+  --portrait-a: #4a2418;
+  --portrait-b: #24150f;
+  --selected-bg: #4a2418;
+  --selected-border: #e6b422;
+  --tag-bg: #f7ead2;
+  --tag-ink: #24150f;
+  --ticket-ink: #24150f;
+  --kitchen-ink: var(--ink-soft);
+  --door-window: #efe3c6;
+  --door-handle: #3a2418;
+  --stove-body: #6b6f7a;
+  --stove-frame: #2a2a30;
+  --stove-inner: #3c3f48;
+  --burner: #ff6a2a;
+  --lamp-cord: #24150f;
+  --lamp-light: #f2c94c;
+  --table-top: #3a2418;
+  --table-top-2: #b3202f;
+  --table-rim: #1e110b;
+  --table-gold: #e6b422;
+  --table-leg: #24150f;
+  --table-glow: drop-shadow(0 2px 0 rgb(0 0 0 / 0.45));
+  --chair-frame: #4a2e1e;
+  --chair-seat: #c8283f;
+  --chair-accent: #6b4426;
+  --prop-glow: drop-shadow(0 2px 0 rgb(0 0 0 / 0.45));
+  --booth-body: #3a2418;
+  --booth-shade: #24150f;
+  --booth-top: #6b4426;
+  --booth-trim: #e6b422;
+  --booth-trim-2: #b3202f;
+  --menu-cover: #b3202f;
+  --menu-trim: #e6b422;
+  --menu-ink: #f7ead2;
+}

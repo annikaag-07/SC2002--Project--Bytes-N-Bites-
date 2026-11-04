@@ -1,0 +1,3 @@
+# <script-file> <seed> <VICTORY|DEFEAT>
+stage1-victory.txt 2002 VICTORY
+stage1-defeat.txt 2002 DEFEAT

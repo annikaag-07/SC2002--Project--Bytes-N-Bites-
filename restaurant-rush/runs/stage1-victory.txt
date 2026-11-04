@@ -1,0 +1,85 @@
+# Stage 1 victory run. Command: ./run.sh --seed 2002 < runs/stage1-victory.txt
+# Strategy: the Waiter is the bottleneck (seat, take order, serve = 3 tasks per customer), so we
+# handle one customer at a time with no idle Waiter turns, and the Chef cooks each order the same
+# turn it is taken. Seed 2002 makes C1 Salad, C2 Pasta, C3 Salad, C4 Burger, C5 Pasta.
+# --- Turn 1: C1 arrives. Seat at once so C1 only loses 8.
+1
+C1
+T1
+0
+# --- Turn 2: take C1's order (Salad, 1 unit); the Chef may cook an order taken this turn.
+2
+C1
+1
+O1
+# --- Turn 3: O1 was READY on turn 2, so it can be served now.
+3
+O1
+0
+# --- Turn 4: C2 arrives; seat immediately. (C1 becomes READY_TO_PAY this turn.)
+1
+C2
+T2
+0
+# --- Turn 5: take C2's order (Pasta, 2 units), Chef does unit 1. Cashier charges C1 ($9.00).
+2
+C2
+1
+O2
+# --- Turn 6: nothing for the Waiter yet; Chef finishes Pasta (READY, servable next turn).
+0
+1
+O2
+# --- Turn 7: C3 arrives, but serving O2 now stops C2 losing satisfaction. C3 waits one turn (-8).
+3
+O2
+0
+# --- Turn 8: seat C3 at the free table T1.
+1
+C3
+T1
+0
+# --- Turn 9: take C3's order (Salad), Chef cooks it. Cashier charges C2 ($18.00).
+2
+C3
+1
+O3
+# --- Turn 10: C4 arrives. Serve O3 first; C4 waits one turn.
+3
+O3
+0
+# --- Turn 11: seat C4 at T2.
+1
+C4
+T2
+0
+# --- Turn 12: take C4's order (Burger), Chef cooks it. Cashier charges C3 ($9.00).
+2
+C4
+1
+O4
+# --- Turn 13: C5 arrives. Serve O4 first.
+3
+O4
+0
+# --- Turn 14: seat C5 at T1. Cashier will charge C4 ($15.00) on turn 15: revenue reaches $51.00.
+1
+C5
+T1
+0
+# --- Turn 15: take C5's order (Pasta), Chef unit 1.
+2
+C5
+1
+O5
+# --- Turn 16: C6 arrives (can never pay in time). Chef finishes O5.
+0
+1
+O5
+# --- Turn 17: serve O5 (C5 cannot pay before the game ends, but stops losing satisfaction).
+3
+O5
+0
+# --- Turn 18: nothing useful left.
+0
+0
