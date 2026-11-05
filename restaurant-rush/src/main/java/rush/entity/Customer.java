@@ -56,6 +56,37 @@ public abstract class Customer {
     protected abstract int satisfactionLossPerTurn();
 
     /**
+     * Customer-specific pricing applied to a dish's menu price when the order is taken.
+     * The default is full price; subclasses may override (for example a discount).
+     *
+     * @param priceCents the price before customer pricing
+     * @return the price after customer pricing
+     */
+    public long applyCustomerPricing(long priceCents) {
+        return priceCents;
+    }
+
+    /**
+     * Hook called when this customer's food is served. The default is no reaction; subclasses may change
+     * their own satisfaction here.
+     *
+     * @param turn the turn the food was served
+     * @return a description of the reaction, or null if there is none
+     */
+    protected String onServed(int turn) {
+        return null;
+    }
+
+    /**
+     * Changes satisfaction by {@code delta}, kept between 0 and 100.
+     *
+     * @param delta points to add (negative to remove)
+     */
+    protected final void changeSatisfaction(int delta) {
+        satisfaction = Math.max(0, Math.min(MAX_SATISFACTION, satisfaction + delta));
+    }
+
+    /**
      * End-of-turn patience rule: a customer still waiting for a table or food loses its per-turn amount
      * (never below 0). Customers who are eating, ready to pay, paid or gone are unaffected.
      */
@@ -116,8 +147,10 @@ public abstract class Customer {
         state = CustomerState.ORDERED;
     }
 
-    void receiveServedOrder() {
+    /** Serving rule: the customer starts eating, then reacts in its own way. Returns the reaction, or null. */
+    final String receiveServedOrder(int turn) {
         state = CustomerState.EATING;
+        return onServed(turn);
     }
 
     void markPaid() {

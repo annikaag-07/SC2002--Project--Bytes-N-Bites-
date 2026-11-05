@@ -1,14 +1,20 @@
 package rush;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
+import java.util.stream.Stream;
 import rush.control.ArrivalSchedule;
 import rush.control.GameConfig;
 import rush.control.GameController;
 import rush.control.GameResult;
 import rush.entity.ActionResult;
 import rush.entity.Cashier;
+import rush.entity.CriticCustomer;
 import rush.entity.Customer;
 import rush.entity.CustomerState;
 import rush.entity.EntityTestSupport;
@@ -19,6 +25,7 @@ import rush.entity.Order;
 import rush.entity.OrderStatus;
 import rush.entity.RegularCustomer;
 import rush.entity.Restaurant;
+import rush.entity.VIPCustomer;
 
 /**
  * Assertion-based rule tests (no JUnit). Each check is counted; the process exits non-zero if any fails.
@@ -50,6 +57,14 @@ public final class RulesSelfTest {
         run("seeded food choice is reproducible and order-independent", RulesSelfTest::seededChoices);
         run("victory criteria boundaries", RulesSelfTest::victoryBoundaries);
         run("game always plays all turns; result only at the end", RulesSelfTest::fullGameLength);
+        // Stage 2: customer behaviour
+        run("VIP loses 5 per waiting turn", RulesSelfTest::vipLoss);
+        run("VIP pays 90% (Burger 1350, Salad 810)", RulesSelfTest::vipPricing);
+        run("Critic loses 12 per waiting turn, pays full price", RulesSelfTest::criticLossAndPrice);
+        run("Critic impressed by fast service (+10, capped at 100)", RulesSelfTest::criticImpressed);
+        run("Critic unimpressed by slow service (-10, floored, never leaves)", RulesSelfTest::criticUnimpressed);
+        run("base schedule: six arrivals including a VIP and a Critic", RulesSelfTest::baseScheduleTypes);
+        run("no type checks in control or boundary", RulesSelfTest::noTypeChecksInControlOrBoundary);
 
         System.out.println();
         System.out.println("RulesSelfTest: " + passed + " checks passed, " + failed + " failed");
@@ -334,7 +349,146 @@ public final class RulesSelfTest {
         check("all-wait game is a defeat", !game.getResult().isVictory());
     }
 
+    private static void vipLoss() {
+        GameController game = typedGame("Salad", ArrivalSchedule.builder(SEED).add(1, VIPCustomer::new).build());
+        Customer vip = waitTurns(game, 1);
+        check("VIP 100 -> 95 after one turn", vip.getSatisfaction() == 95);
+        waitTurns(game, 2);
+        check("VIP 95 -> 85 after two more turns", vip.getSatisfaction() == 85);
+    }
+
+    private static void vipPricing() {
+        check("VIP Burger locks 1350", lockedPriceFor("Burger", VIPCustomer::new) == 1350);
+        check("VIP Salad locks 810", lockedPriceFor("Salad", VIPCustomer::new) == 810);
+        check("VIP Pasta locks 1620", lockedPriceFor("Pasta", VIPCustomer::new) == 1620);
+        check("Regular Burger locks 1500", lockedPriceFor("Burger", RegularCustomer::new) == 1500);
+        check("VIP pricing rounds half up", new VIPCustomer("C1", 1, 1, SEED).applyCustomerPricing(5) == 5);
+    }
+
+    private static void criticLossAndPrice() {
+        GameController game = typedGame("Salad", ArrivalSchedule.builder(SEED).add(1, CriticCustomer::new).build());
+        Customer critic = waitTurns(game, 1);
+        check("Critic 100 -> 88 after one turn", critic.getSatisfaction() == 88);
+        check("Critic Burger locks full 1500", lockedPriceFor("Burger", CriticCustomer::new) == 1500);
+    }
+
+    private static void criticImpressed() {
+        // Burger: seat turn 1 (88), order + cook turn 2 (76), serve turn 3 = 1 turn after ordering -> 86.
+        GameController game = typedGame("Burger", ArrivalSchedule.builder(SEED).add(1, CriticCustomer::new).build());
+        game.beginTurn();
+        ok(game.waiterSeat("C1", "T1"));
+        ok(game.chefWait());
+        game.endTurn();
+        game.beginTurn();
+        ok(game.waiterTakeOrder("C1"));
+        ok(game.chefAdvance("O1"));
+        game.endTurn();
+        Customer critic = game.getCustomers().get(0);
+        check("Critic at 76 before serving", critic.getSatisfaction() == 76);
+        game.beginTurn();
+        ActionResult served = game.waiterServe("O1");
+        ok(served);
+        check("reaction reported as an event", served.getMessage().contains("IMPRESSED"));
+        check("impressed: 76 -> 86", critic.getSatisfaction() == 86);
+        ok(game.chefWait());
+        game.endTurn();
+        check("no loss once served", critic.getSatisfaction() == 86);
+
+        // Pasta at the 2-turn limit is still fast; impressed at 100 stays capped at 100.
+        Customer capped = new CriticCustomer("C1", 1, 1, SEED);
+        EntityTestSupport.restaurantWithServedCustomers(new Customer[] {capped}, new int[] {3},
+                Menu.standard().itemNamed("Pasta"));
+        check("served exactly 2 turns after ordering: impressed, capped at 100", capped.getSatisfaction() == 100);
+    }
+
+    private static void criticUnimpressed() {
+        Customer slow = new CriticCustomer("C1", 1, 1, SEED);
+        EntityTestSupport.restaurantWithServedCustomers(new Customer[] {slow}, new int[] {4},
+                Menu.standard().itemNamed("Salad"));
+        check("served 3 turns after ordering: 100 -> 90", slow.getSatisfaction() == 90);
+
+        // In play: seat turn 1, order turn 6 (sat 28), cook, serve turn 9 (sat 4) -> unimpressed floors at 0.
+        GameController game = typedGame("Burger", ArrivalSchedule.builder(SEED).add(1, CriticCustomer::new).build());
+        game.beginTurn();
+        ok(game.waiterSeat("C1", "T1"));
+        ok(game.chefWait());
+        game.endTurn();
+        Customer critic = waitTurns(game, 4);
+        game.beginTurn();
+        ok(game.waiterTakeOrder("C1"));
+        ok(game.chefAdvance("O1"));
+        game.endTurn();
+        waitTurns(game, 2);
+        check("Critic at 4 before late serving", critic.getSatisfaction() == 4);
+        game.beginTurn();
+        ok(game.waiterServe("O1"));
+        ok(game.chefWait());
+        game.endTurn();
+        check("unimpressed floors at 0", critic.getSatisfaction() == 0);
+        check("a served Critic at 0 does not leave", critic.getState() == CustomerState.EATING);
+        waitTurns(game, 2);
+        check("pays with 0 recorded", critic.getState() == CustomerState.PAID && critic.getRecordedSatisfaction() == 0);
+        check("full price paid", game.getRevenueCents() == 1500);
+    }
+
+    private static void baseScheduleTypes() {
+        List<String> types = new ArrayList<>();
+        for (Customer customer : ArrivalSchedule.base(SEED).getCustomers()) {
+            types.add(customer.getArrivalTurn() + ":" + customer.typeLabel());
+        }
+        check("base schedule " + types, types.equals(List.of(
+                "1:Regular", "4:VIP", "7:Regular", "10:Critic", "13:Regular", "16:Regular")));
+    }
+
+    private static void noTypeChecksInControlOrBoundary() {
+        Path root = Paths.get("src/main/java/rush");
+        if (!Files.isDirectory(root)) {
+            System.out.println("  (source tree not found from working directory; static check skipped)");
+            return;
+        }
+        for (String layer : List.of("control", "boundary")) {
+            try (Stream<Path> files = Files.walk(root.resolve(layer))) {
+                for (Path file : (Iterable<Path>) files.filter(f -> f.toString().endsWith(".java"))::iterator) {
+                    String text = Files.readString(file);
+                    check(file + " has no instanceof/getClass()",
+                            !text.contains("instanceof") && !text.contains("getClass()"));
+                }
+            } catch (IOException e) {
+                check("could read " + layer + ": " + e, false);
+            }
+        }
+    }
+
     // ---------------------------------------------------------------- helpers
+
+    private static GameController typedGame(String itemName, ArrivalSchedule schedule) {
+        Menu single = new Menu(List.of(Menu.standard().itemNamed(itemName)));
+        return new GameController(GameConfig.base(SEED).withMenu(single), schedule);
+    }
+
+    /** Plays the given number of all-wait turns and returns C1. */
+    private static Customer waitTurns(GameController game, int turns) {
+        for (int i = 0; i < turns; i++) {
+            game.beginTurn();
+            waitBoth(game);
+            game.endTurn();
+        }
+        return game.getCustomers().get(0);
+    }
+
+    /** Seats one customer of the given type on turn 1 and takes its order (single-item menu) on turn 2. */
+    private static long lockedPriceFor(String itemName, ArrivalSchedule.CustomerFactory type) {
+        GameController game = typedGame(itemName, ArrivalSchedule.builder(SEED).add(1, type).build());
+        game.beginTurn();
+        ok(game.waiterSeat("C1", "T1"));
+        ok(game.chefWait());
+        game.endTurn();
+        game.beginTurn();
+        ok(game.waiterTakeOrder("C1"));
+        ok(game.chefWait());
+        game.endTurn();
+        return game.getOrders().get(0).getLockedPriceCents();
+    }
 
     /** A base-setting game whose menu has a single item, so every customer's choice is fixed. */
     private static GameController singleItemGame(String itemName, int... arrivalTurns) {

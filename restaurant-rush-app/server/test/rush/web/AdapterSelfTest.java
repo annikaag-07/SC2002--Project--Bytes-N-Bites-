@@ -6,16 +6,20 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import rush.control.GameController;
 import rush.control.GameEvent;
 import rush.entity.ActionResult;
 import rush.entity.Customer;
 import rush.entity.CustomerState;
+import rush.entity.Menu;
+import rush.web.ArrivalPlan.Kind;
 
 /**
- * Checks the web adapter against the real CLI: replays the Java project's Stage 1 input scripts through
- * GameSession (answering prompts in the CLI's order) and compares every event line with the CLI transcripts. Also checks save/replay and the decision questions. The mode, schedule and timing tests are in {@link ModeSelfTest}.
+ * Checks the web adapter against the real CLI: replays the Java project's Stage 2 and Stage 1 input scripts
+ * through GameSession with the CLI's arrivals (answering prompts in the CLI's order) and compares every event line
+ * with the CLI transcripts. Also checks save/replay and the decision questions. The mode, schedule and timing tests are in {@link ModeSelfTest}.
  * Usage: java ... rush.web.AdapterSelfTest [backend-dir]
  */
 public final class AdapterSelfTest {
@@ -28,8 +32,13 @@ public final class AdapterSelfTest {
 
     public static void main(String[] args) throws IOException {
         Path backend = Paths.get(args.length > 0 ? args[0] : "../restaurant-rush");
+        // The CLI's Stage 2 runs use its fixed base arrivals; the Stage 1 runs use six Regulars.
+        List<Kind> base = List.of(Kind.REGULAR, Kind.VIP, Kind.REGULAR, Kind.CRITIC, Kind.REGULAR, Kind.REGULAR);
+        for (String name : List.of("stage2-victory", "stage2-defeat", "stage2-five-payers")) {
+            cliParity(backend, name, base);
+        }
         for (String name : List.of("stage1-victory", "stage1-defeat")) {
-            cliParity(backend, name);
+            cliParity(backend, name, Collections.nCopies(6, Kind.REGULAR));
         }
         saveReplay();
         outOfTurnRejected();
@@ -40,9 +49,10 @@ public final class AdapterSelfTest {
         }
     }
 
-    /** Replays a CLI script (seed 2002, the same six Regulars as the CLI) and compares every event line. */
-    private static void cliParity(Path backend, String name) throws IOException {
-        GameSession s = replayScript(backend, name, GameSession.start(2002, ModeFeatures.STAGE1, 1));
+    /** Replays a CLI script with the CLI's arrivals (test-only start) and compares every event line. */
+    private static void cliParity(Path backend, String name, List<Kind> arrivals) throws IOException {
+        GameSession s = replayScript(backend, name, GameSession.startWith(2002, ModeFeatures.STAGE2,
+                ArrivalPlan.ARRIVAL_TURNS, arrivals, Menu.standard()));
         check(name + ": " + eventLines(s).size() + " event lines identical to the CLI log",
                 eventLines(s).equals(cliEventLines(backend, name)));
         String result = "RESULT: " + (s.game().getResult().isVictory() ? "VICTORY" : "DEFEAT");
@@ -119,14 +129,14 @@ public final class AdapterSelfTest {
     }
 
     private static void saveReplay() {
-        GameSession s = GameSession.start(42, ModeFeatures.STAGE1, 1);
+        GameSession s = GameSession.start(42, ModeFeatures.STAGE2, 1);
         s.perform("waiterSeat", "C1", "T1", "");
         s.perform("chefWait", "", "", "");
         s.next();
         s.perform("waiterTakeOrder", "C1", "", "");
         s.perform("chefCook", "", "", "O1");
         s.next();
-        GameSession copy = GameSession.replay(42, ModeFeatures.STAGE1, 1, s.actionLog());
+        GameSession copy = GameSession.replay(42, ModeFeatures.STAGE2, 1, s.actionLog());
         check("replayed save has same turn and phase",
                 copy.game().getCurrentTurn() == 3 && copy.phase() == s.phase());
         check("replayed save has same order and satisfaction",
@@ -136,7 +146,7 @@ public final class AdapterSelfTest {
     }
 
     private static void outOfTurnRejected() {
-        GameSession s = GameSession.start(1, ModeFeatures.STAGE1, 1);
+        GameSession s = GameSession.start(1, ModeFeatures.STAGE2, 1);
         check("first decision is the Waiter's", s.phase() == GameSession.Phase.WAITER);
         check("Chef command before the Waiter is rejected", !s.perform("chefWait", "", "", "").isSuccess());
         check("unknown command rejected", !s.perform("dance", "", "", "").isSuccess());
@@ -145,7 +155,7 @@ public final class AdapterSelfTest {
 
     /** The front end asks "which table?" for seat / take order / serve, listing every table. */
     private static void tableQuestions() {
-        GameSession s = GameSession.start(42, ModeFeatures.STAGE1, 1);
+        GameSession s = GameSession.start(42, ModeFeatures.STAGE2, 1);
         String seat = StateJson.of(s);
         check("seat asks who, then which table",
                 seat.contains("\"prompt\":\"Who should I seat?\"") && seat.contains("\"prompt\":\"Which table should I seat them at?\""));

@@ -1,7 +1,7 @@
 /*
  * THEME FILE - change the whole look of Bytes N Bites from here.
  * Every colour and font is a CSS variable. The pixel sprites read these too (fill="var(--...)"), so changing
- * --shirt-regular recolours every customer, --table-check every table, and so on.
+ * --shirt-vip recolours every VIP, --table-check every table, and so on.
  */
 :root,
 [data-theme="neon"] {
@@ -75,6 +75,10 @@
 
   /* Customer shirts (by type) */
   --shirt-regular: #43b65a;
+  --shirt-vip: #1b1a24;
+  --shirt-vip-tie: #f7c948;
+  --shirt-critic: #f2f2f2;
+  --critic-beret: #c8283f;
 
   /* Staff uniforms */
   --chef-jacket: #f4f4f4;

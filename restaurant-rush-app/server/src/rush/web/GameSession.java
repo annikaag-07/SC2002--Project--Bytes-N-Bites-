@@ -9,7 +9,11 @@ import rush.control.GameController;
 import rush.control.GameEvent;
 import rush.entity.ActionResult;
 import rush.entity.Customer;
+import rush.entity.CriticCustomer;
 import rush.entity.Menu;
+import rush.entity.RegularCustomer;
+import rush.entity.VIPCustomer;
+import rush.web.ArrivalPlan.Kind;
 
 /**
  * Adapter between the web front end and the unchanged back end. Like the CLI's ConsoleUI it is a boundary:
@@ -35,11 +39,11 @@ final class GameSession {
     private List<GameEvent> lastTurnEvents = List.of();
     private List<GameEvent> turnStartEvents = List.of();
 
-    private GameSession(long seed, ModeFeatures mode, int day, ArrivalSchedule schedule, Menu menu) {
+    private GameSession(long seed, ModeFeatures mode, int day, int[] turns, List<Kind> kinds, Menu menu) {
         this.seed = seed;
         this.mode = mode;
         this.day = day;
-        this.schedule = schedule;
+        this.schedule = buildSchedule(seed, turns, kinds);
         this.game = new GameController(GameConfig.base(seed).withMenu(menu), schedule);
     }
 
@@ -51,21 +55,21 @@ final class GameSession {
      * @param day  which restaurant day this is (shown to players instead of the seed)
      */
     static GameSession start(long seed, ModeFeatures mode, int day) {
-        // The base setting: six Regular customers on turns 1, 4, 7, 10, 13 and 16.
-        return begin(new GameSession(seed, mode, day, ArrivalSchedule.base(seed), Menu.standard()));
+        return begin(new GameSession(seed, mode, day, ArrivalPlan.ARRIVAL_TURNS, ArrivalPlan.kinds(seed),
+                Menu.standard()));
     }
 
     /**
-     * Test-only start with explicit arrival turns (Regular customers) and menu (the production path is
-     * {@link #start}).
+     * Test-only start with an explicit arrival list and menu (the production path is {@link #start}).
      *
      * @param seed  game seed (still drives the customers' food choices)
      * @param mode  the mode
      * @param turns arrival turns, non-decreasing
+     * @param kinds who arrives on each of those turns
      * @param menu  the menu customers choose from
      */
-    static GameSession startWith(long seed, ModeFeatures mode, int[] turns, Menu menu) {
-        return begin(new GameSession(seed, mode, 1, ArrivalSchedule.regulars(seed, turns), menu));
+    static GameSession startWith(long seed, ModeFeatures mode, int[] turns, List<Kind> kinds, Menu menu) {
+        return begin(new GameSession(seed, mode, 1, turns, kinds, menu));
     }
 
     private static GameSession begin(GameSession session) {
@@ -86,6 +90,22 @@ final class GameSession {
             }
         }
         return session;
+    }
+
+    /**
+     * Builds the back end's arrival schedule from the plan's kinds. This is the only place in the adapter that
+     * names customer classes.
+     */
+    private static ArrivalSchedule buildSchedule(long seed, int[] turns, List<Kind> kinds) {
+        ArrivalSchedule.Builder builder = ArrivalSchedule.builder(seed);
+        for (int i = 0; i < kinds.size(); i++) {
+            switch (kinds.get(i)) {
+                case VIP -> builder.add(turns[i], VIPCustomer::new);
+                case CRITIC -> builder.add(turns[i], CriticCustomer::new);
+                default -> builder.add(turns[i], RegularCustomer::new);
+            }
+        }
+        return builder.build();
     }
 
     /** @return the decision to ask for now */

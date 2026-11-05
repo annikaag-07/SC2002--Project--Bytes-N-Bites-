@@ -764,6 +764,13 @@ p {
   color: #10101a;
   background: var(--shirt-regular);
 }
+.type-VIP {
+  background: var(--yellow);
+}
+.type-Critic {
+  background: var(--critic-beret);
+  color: #fff;
+}
 
 .food {
   display: inline-flex;

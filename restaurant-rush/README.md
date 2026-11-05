@@ -5,18 +5,20 @@ Restaurant Rush is a turn-based command-line restaurant game in Java. You play t
 ## Repository
 
 - https://github.com/annikaag-07/SC2002--Project--Bytes-N-Bites-
-- Git tag `stage-1` marks this stage.
+- Git tags `stage-1` and `stage-2` mark the runnable stages. Each tag builds and passes `./test.sh` on its own, and each stage builds on the previous one.
 - The repository root holds the web game (`restaurant-rush-app/`) and this Java game (`restaurant-rush/`).
 
-Run this stage from a fresh clone:
+Run a stage from a fresh clone:
 
 ```bash
 git clone https://github.com/annikaag-07/SC2002--Project--Bytes-N-Bites-.git
 ```
 
 ```bash
-cd SC2002--Project--Bytes-N-Bites- && git checkout stage-1 && cd restaurant-rush && ./build.sh && ./run.sh
+cd SC2002--Project--Bytes-N-Bites- && git checkout stage-2 && cd restaurant-rush && ./build.sh && ./run.sh
 ```
+
+(Use `stage-1` the same way to run Stage 1, and `git checkout main` to return.)
 
 ## Requirements
 
@@ -57,11 +59,25 @@ run.bat --seed 2002
 ## Replaying the scripted runs
 
 ```bash
-./run.sh --seed 2002 < runs/stage1-victory.txt
+./run.sh --seed 2002 < runs/stage2-victory.txt
 ```
 
 ```bash
-./run.sh --seed 2002 < runs/stage1-defeat.txt
+./run.sh --seed 2002 < runs/stage2-defeat.txt
 ```
 
+```bash
+./run.sh --seed 2002 < runs/stage2-five-payers.txt
+```
+
+The Stage 1 scripts (`runs/stage1-*.txt`) belong to the all-Regular Stage 1 schedule; replay them from the `stage-1` tag.
+
 When input is piped, the game echoes each input line so the transcript reads like an interactive session. Lines starting with `#` are comments. If the input ends early, every remaining prompt defaults to Wait. See [docs/TEST_NOTES.md](docs/TEST_NOTES.md) for turn-by-turn walkthroughs and [docs/RULES_AND_ASSUMPTIONS.md](docs/RULES_AND_ASSUMPTIONS.md) for the exact rules.
+
+## Customer types (Stage 2)
+
+| Type | Loss per waiting turn | Bill | Special |
+|---|---|---|---|
+| Regular | 8 | Full price | None |
+| VIP | 5 | 10% off | None |
+| Critic | 12 | Full price | Judges service speed: served within 2 turns of ordering gives +10 (impressed), otherwise -10 (unimpressed) |

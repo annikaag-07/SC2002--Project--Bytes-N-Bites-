@@ -1,0 +1,88 @@
+# Stage 2 defeat run. Command: ./run.sh --seed 2002 < runs/stage2-defeat.txt
+# Strategy: a manager who lets the kitchen idle and serves late. Four customers still pay more than
+# $45, but the impatient Critic gets slow service, is UNIMPRESSED (-10), and pulls the average
+# satisfaction below 60.
+# --- Turn 1: seat C1. Chef waits.
+1
+C1
+T1
+0
+# --- Turn 2: take C1's order (Salad). Chef idles instead of cooking.
+2
+C1
+0
+# --- Turn 3: Waiter waits; Chef cooks O1 (READY).
+0
+1
+O1
+# --- Turn 4: C2 (VIP) arrives; seat. Chef waits.
+1
+C2
+T2
+0
+# --- Turn 5: serve O1.
+3
+O1
+0
+# --- Turn 6: take C2's order (Pasta, VIP $16.20). Chef unit 1.
+2
+C2
+1
+O2
+# --- Turn 7: C3 arrives. Try to seat C3 at T1: rejected (still occupied: C1 pays this turn). Then wait.
+1
+C3
+T1
+0
+1
+O2
+# --- Turn 8: seat C3 at T1 (freed by C1's payment). Chef waits.
+1
+C3
+T1
+0
+# --- Turn 9: serve the VIP's Pasta.
+3
+O2
+0
+# --- Turn 10: C4 (Critic) arrives and must wait: no table is free. Take C3's order (Salad), cook it.
+2
+C3
+1
+O3
+# --- Turn 11: serve O3.
+3
+O3
+0
+# --- Turn 12: seat the Critic at T2 (freed by C2's payment on turn 11).
+1
+C4
+T2
+0
+# --- Turn 13: C5 arrives. Take the Critic's order (Burger) - but the Chef idles.
+2
+C4
+0
+# --- Turn 14: seat C5 at T1. Chef finally cooks the Critic's Burger.
+1
+C5
+T1
+1
+O4
+# --- Turn 15: take C5's order (Pasta), Chef unit 1.
+2
+C5
+1
+O5
+# --- Turn 16: serve the Critic: 3 turns after ordering -> UNIMPRESSED (-10). Chef unit 2.
+3
+O4
+1
+O5
+# --- Turn 17: serve O5.
+3
+O5
+0
+# --- Turn 18
+0
+0

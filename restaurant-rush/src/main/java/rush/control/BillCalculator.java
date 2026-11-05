@@ -6,14 +6,16 @@ import rush.entity.Order;
 public final class BillCalculator {
 
     /**
-     * Works out the price of a freshly taken order and locks it. Stage 1: the menu price.
+     * Works out the price of a freshly taken order and locks it: the menu price, then the customer's own
+     * pricing (for example the VIP discount), dispatched polymorphically through the customer.
      *
      * @param order an order whose price is not yet locked
      * @param turn  the turn the order is taken
      * @return the locked price in cents
      */
     public long lockPrice(Order order, int turn) {
-        long price = order.getItem().getPriceCents();
+        long base = order.getItem().getPriceCents();
+        long price = order.getCustomer().applyCustomerPricing(base);
         order.lockPrice(price);
         return price;
     }

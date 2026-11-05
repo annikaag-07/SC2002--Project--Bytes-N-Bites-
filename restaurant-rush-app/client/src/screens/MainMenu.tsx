@@ -12,9 +12,9 @@ import { store, type StoreState } from "@/store/gameStore";
 /** The game's mode (one card on "Start new game"). */
 const MODES: { mode: GameMode; name: string; text: string }[] = [
   {
-    mode: "stage1",
-    name: "Stage 1",
-    text: "Regular customers, the three-dish menu, Waiter, Chef and Cashier. The base game.",
+    mode: "stage2",
+    name: "Stage 2",
+    text: "Regular, VIP and Critic customers, the three-dish menu, Waiter, Chef and Cashier.",
   },
 ];
 

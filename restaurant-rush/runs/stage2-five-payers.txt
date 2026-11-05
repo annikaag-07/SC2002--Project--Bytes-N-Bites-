@@ -1,0 +1,88 @@
+# Stage 2 alternative victory (constrained-staff trade-off). Command: ./run.sh --seed 2002 < runs/stage2-five-payers.txt
+# Identical to stage2-victory.txt up to turn 12; from turn 13 the manager trades the Critic's reaction for a 5th payer.
+# Base setting with customer types: C1 Regular, C2 VIP, C3 Regular, C4 Critic, C5 Regular, C6 Regular.
+# Seed 2002 choices: C1 Salad, C2 Pasta, C3 Salad, C4 Burger, C5 Pasta.
+# Strategy: keep the Waiter busy every useful turn, cook each order the turn it is taken, and give the
+# Critic's order kitchen and serving priority so it arrives within 2 turns (Critic is impressed: +10).
+# --- Turn 1: C1 (Regular) arrives. Seat at once.
+1
+C1
+T1
+0
+# --- Turn 2: take C1's order (Salad); Chef cooks it the same turn.
+2
+C1
+1
+O1
+# --- Turn 3: serve O1 (READY since turn 2).
+3
+O1
+0
+# --- Turn 4: C2 (VIP) arrives; seat immediately.
+1
+C2
+T2
+0
+# --- Turn 5: take C2's order: Pasta, VIP pays 90% -> locked $16.20. Chef unit 1. C1 pays $9.00.
+2
+C2
+1
+O2
+# --- Turn 6: Chef finishes the Pasta.
+0
+1
+O2
+# --- Turn 7: C3 arrives; serve the VIP's Pasta first (C3 waits one turn).
+3
+O2
+0
+# --- Turn 8: seat C3.
+1
+C3
+T1
+0
+# --- Turn 9: take C3's order (Salad), cook it. C2 pays $16.20.
+2
+C3
+1
+O3
+# --- Turn 10: C4 (Critic, loses 12/turn) arrives. Serve O3 first.
+3
+O3
+0
+# --- Turn 11: seat the Critic.
+1
+C4
+T2
+0
+# --- Turn 12: take the Critic's order (Burger) and cook it immediately. C3 pays $9.00.
+2
+C4
+1
+O4
+# --- Turn 13: C5 arrives. DECISION: seat C5 now instead of serving the Critic. From turn 7 the Waiter
+# needs 10 tasks in turns 7-16 for C5 to pay by turn 18, so the Critic's food can only go out on turn 15.
+1
+C5
+T1
+0
+# --- Turn 14: take C5's order (Pasta) so the kitchen can start; Chef unit 1.
+2
+C5
+1
+O5
+# --- Turn 15: serve the Critic: 3 turns after ordering -> UNIMPRESSED (-10). Chef finishes O5.
+3
+O4
+1
+O5
+# --- Turn 16: C6 arrives. Serve O5 on time: C5 will be READY_TO_PAY on 17 and pay on 18.
+3
+O5
+0
+# --- Turn 17: Critic pays.
+0
+0
+# --- Turn 18: C5 pays. Five payers: more revenue, lower (but still >= 60) average.
+0
+0

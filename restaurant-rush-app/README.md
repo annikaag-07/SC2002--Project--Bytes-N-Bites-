@@ -20,7 +20,7 @@ Open **http://localhost:8090**. For development with hot reload (API on 8090, Vi
 ./dev.sh
 ```
 
-Self-tests: `AdapterSelfTest` replays the CLI's Stage 1 scripts through the web adapter and compares every event line with the CLI logs, and checks save/replay and the decision questions. `ModeSelfTest` checks the mode, the arrivals, the payment timing (including the brief's section 3.3 example row by row) and plays 200 seeds with a bot:
+Self-tests: `AdapterSelfTest` replays the CLI's Stage 2 scripts (with the CLI's fixed arrivals) and Stage 1 scripts (six Regulars) through the web adapter and compares every event line with the CLI logs, and checks save/replay and the decision questions. `ModeSelfTest` checks the mode, the random arrival schedule over 5,000 seeds, the payment timing (including the brief's section 3.3 example row by row) and plays 200 seeds with a bot:
 
 ```bash
 ./test.sh
@@ -45,11 +45,11 @@ browser (React)                              Java (JDK only)
 
 ### Mode
 
-New game offers one mode, **Stage 1** (`mode=stage1`). `server/src/rush/web/ModeFeatures.java` names it for the API, the save file and the high-score file. Any other mode is an HTTP 400 error, and a save that names another mode is discarded and treated as "no save".
+New game offers one mode, **Stage 2** (`mode=stage2`). `server/src/rush/web/ModeFeatures.java` names it for the API, the save file and the high-score file. Any other mode is an HTTP 400 error, and a save that names another mode is discarded and treated as "no save".
 
 ### Arrivals
 
-Arrival turns never change: 1, 4, 7, 10, 13 and 16, one Regular customer each (`ArrivalSchedule.base` in the back end). The customers' food choices come from the back end's own seeded generators, so the same seed always gives the same game and Continue rebuilds it exactly.
+Arrival turns never change: 1, 4, 7, 10, 13 and 16. `server/src/rush/web/ArrivalPlan.java` picks each slot as Regular 50 / VIP 25 / Critic 25 (named constants), then repairs the result so every game has at least 1 VIP, at least 1 Critic and at least 2 Regulars. A VIP or Critic can land on any slot, including turns 1 and 16, and can appear more than once. The schedule is a pure function of the seed with its own seeded generator, so Continue rebuilds the same customers and the customers' food choices are unaffected.
 
 ### Eating and payment
 
@@ -64,14 +64,14 @@ Options that need a target come with **follow-up questions** (`steps`), and the 
 - **Serve:** "Which table should I serve?"
 - **Cook (Chef):** "Which order should I cook?"
 
-The table questions list both tables. A table where the job makes no sense is shown disabled with the reason, e.g. "Empty table", "Taken by C1 (Regular)", or "C2 (Regular) is waiting for Pasta (1/2 cooked)".
+The table questions list both tables. A table where the job makes no sense is shown disabled with the reason, e.g. "Empty table", "Taken by C1 (Regular)", or "C2 (VIP) is waiting for Pasta (1/2 cooked)".
 
 ### API
 
 | Method | Path | Returns |
 |---|---|---|
 | GET | `/api/status` | `{ hasSave, hasGame }` |
-| POST | `/api/new?mode=stage1` | game state (unknown or missing mode: 400) |
+| POST | `/api/new?mode=stage2` | game state (unknown or missing mode: 400) |
 | POST | `/api/continue` | game state (replays the save) |
 | GET | `/api/state` | game state |
 | POST | `/api/action?type=&customer=&table=&order=` | `{ result, events, state }` |
@@ -88,9 +88,9 @@ Action types: `waiterSeat`, `waiterTakeOrder`, `waiterServe`, `waiterWait`, `che
 
 ## Customising
 
-- **Colours and look**: everything is a CSS variable in `client/src/theme/theme.css`. That includes the customers' shirts, staff uniforms, table ice, walls, emotion colours and fonts.
+- **Colours and look**: everything is a CSS variable in `client/src/theme/theme.css`. That includes shirts per customer type, staff uniforms, table ice, walls, emotion colours and fonts.
 - **Who wears what**: `STAFF_LOOKS` and `CUSTOMER_LOOKS` in `client/src/components/pixel/sprites.ts`.
-- **Pixel art**: the sprites are character grids in `client/src/components/pixel/sprites.ts`. Their colours come from `theme.css`, and each staff member's and the customers' outfit is in `STAFF_LOOKS` / `CUSTOMER_LOOKS`.
+- **Pixel art**: the sprites are character grids in `client/src/components/pixel/sprites.ts`. Their colours come from `theme.css`, and each staff member's or customer type's outfit is in `STAFF_LOOKS` / `CUSTOMER_LOOKS`.
 - **Penguin skin**: the Penguins toggle in the menu or HUD swaps every figure for a penguin wearing the same colours.
 - **Sounds**: every effect is synthesised in the browser (Web Audio chiptune) in `client/src/sound/soundManager.ts`, so no audio files are needed. The effects are click, select, back, seat, order, cook, serve, pay, arrive, anger, leave, next turn, error, victory and game over. To use a recorded sound instead, put it in `client/public/sounds/` and add it to `CUSTOM_FILES`.
 - **Keyboard**: A-D pick an option, 1-9 answer a "which table?" question, Esc goes back.
@@ -102,9 +102,9 @@ Action types: `waiterSeat`, `waiterTakeOrder`, `waiterServe`, `waiterWait`, `che
 
 ## Decisions to flag
 
-0. **Mode.** New game offers **Stage 1**; picking it starts the game.
+0. **Mode.** New game offers **Stage 2**; picking it starts the game.
 1. **Chef options** come from the back end: cook one unit / wait.
 2. **End of turn**: after the Chef chooses, the server closes the turn: payment, eating, waiting penalties and departures. The UI shows a summary, and **Start turn N ▶** begins the next turn.
 3. **Payment timing.** The brief's timing (see "Eating and payment" above).
-4. **Arrivals**: a guest arrives on turns 1, 4, 7, 10, 13 and 16 (every 3rd turn). The back end schedules them; the UI does not schedule anything.
+4. **Arrivals**: a guest arrives on turns 1, 4, 7, 10, 13 and 16 (every 3rd turn). Who arrives comes from `ArrivalPlan` on the server (see "Arrivals" above); the UI does not schedule anything.
 5. Each new game uses a random seed internally; players see the Day number and stars instead.

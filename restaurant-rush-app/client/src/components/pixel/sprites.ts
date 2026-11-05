@@ -35,8 +35,8 @@ function tint(color: string, mood: Mood): string {
 
 // ------------------------------------------------------------------ people
 
-type Head = "hair" | "slick" | "toque" | "bald";
-type Item = "tray" | null;
+type Head = "hair" | "slick" | "toque" | "beret" | "bald";
+type Item = "tray" | "notepad" | null;
 
 export interface Look {
   head: Head;
@@ -54,6 +54,7 @@ const HEADS: Record<Head, string[]> = {
   slick: ["............", "...hhhhh....", "..hhhhhhhh..", "..hhhhhhhh..", "..hssssssh.."],
   bald: ["............", "............", "....ssss....", "...ssssss...", "..ssssssss.."],
   toque: ["..wwwwwwww..", ".wwwwwwwwww.", ".wwwwwwwwww.", "..wwwwwwww..", "..WWWWWWWW..", "..ssssssss.."],
+  beret: ["......R.....", "...RRRRRR...", "..RRRRRRRRR.", ".RRRRRRRRR..", "..hssssssh.."],
 };
 
 const MOUTHS: Record<Mood, [string, string]> = {
@@ -77,6 +78,10 @@ export function personSprite(look: Look, mood: Mood = "calm", id = "staff"): Spr
   const sleeveRows = look.item === "tray"
     ? [".rbbbaabbggg", ".rbbbaabbbr.", ".sbbbaabbbs."]
     : [".rbbbaabbbr.", ".rbbbaabbbr.", ".sbbbaabbbs."];
+  if (look.item === "notepad") {
+    sleeveRows[1] = "krbbbaabbbr.";
+    sleeveRows[2] = "ksbbbaabbbs.";
+  }
   const rows = [
     ...HEADS[look.head],
     "..sesssses..",
@@ -107,14 +112,16 @@ export function personSprite(look: Look, mood: Mood = "calm", id = "staff"): Spr
       f: "var(--shoes)",
       w: "#f4f4f4",
       W: "#c9cde0",
+      R: "var(--critic-beret)",
       g: "var(--tray)",
+      k: "#fff6d8",
     },
   };
 }
 
 /** Penguin version: same uniform colour shown as a scarf, same hats. */
 export function penguinSprite(look: Look, mood: Mood = "calm"): Sprite {
-  const hat = look.head === "toque" ? HEADS.toque.slice(0, 5) : ["............"];
+  const hat = look.head === "toque" ? HEADS.toque.slice(0, 5) : look.head === "beret" ? HEADS.beret.slice(0, 4) : ["............"];
   const rows = [
     ...hat.map((r) => r.replace(/[hs]/g, "o")),
     "....oooo....",
@@ -140,7 +147,8 @@ export function penguinSprite(look: Look, mood: Mood = "calm"): Sprite {
       w: tint("#f4f4f4", mood),
       e: "var(--outline)",
       y: "var(--penguin-beak)",
-      a: look.shirt === "var(--waiter-vest)" ? look.accent : look.shirt,
+      a: look.shirt === "var(--shirt-vip)" || look.shirt === "var(--waiter-vest)" ? look.accent : look.shirt,
+      R: "var(--critic-beret)",
       W: "#c9cde0",
     },
   };
@@ -157,6 +165,8 @@ export function seatedSprite(sprite: Sprite, skin: Skin): Sprite {
 
 export const CUSTOMER_LOOKS: Record<CustomerType, Look> = {
   Regular: { head: "hair", shirt: "var(--shirt-regular)", accent: "var(--shirt-regular)" },
+  VIP: { head: "slick", shirt: "var(--shirt-vip)", accent: "var(--shirt-vip-tie)" },
+  Critic: { head: "beret", shirt: "var(--shirt-critic)", accent: "#c9cde0", item: "notepad" },
 };
 
 /** Staff looks; the Manager narrates the end-of-turn summary. */

@@ -66,6 +66,8 @@ function warnings(game: GameState): string[] {
   const out: string[] = [];
   const angry = game.customers.filter((x) => x.satisfaction < 60 && ["WAITING", "SEATED", "ORDERED"].includes(x.state));
   if (angry.length > 0) out.push(`Getting angry: ${angry.map((x) => `${x.id} (${x.satisfaction})`).join(", ")}!`);
+  const critic = game.customers.find((x) => x.type === "Critic" && x.state === "ORDERED");
+  if (critic) out.push("The Critic is waiting: serve within 2 turns of ordering to impress.");
   return out;
 }
 

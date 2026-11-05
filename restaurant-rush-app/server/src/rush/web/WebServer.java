@@ -24,7 +24,7 @@ import rush.entity.ActionResult;
  *
  * <pre>
  * GET  /api/status                         -> { hasSave, hasGame }
- * POST /api/new?seed=&amp;mode=stage1 -> state (unknown mode: 400)
+ * POST /api/new?seed=&amp;mode=stage2 -> state (unknown mode: 400)
  * POST /api/continue                       -> state (replays the saved game)
  * GET  /api/state                          -> state
  * POST /api/action?type=&amp;customer=&amp;table=&amp;order= -> { result, events, state }

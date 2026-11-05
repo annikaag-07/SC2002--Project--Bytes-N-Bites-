@@ -1,7 +1,6 @@
 package rush.web;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -17,15 +16,17 @@ import rush.entity.Menu;
 import rush.entity.MenuItem;
 import rush.entity.Order;
 import rush.entity.Table;
+import rush.web.ArrivalPlan.Kind;
 
 /**
- * Tests for the web game's mode: what it has, its arrivals, the brief's eating and payment timing (section 3.2 step 4 and the example in 3.3), and a bot that plays many seeds.
+ * Tests for the web game's mode: what it has, the seeded VIP / Critic schedule, the brief's eating and payment
+ * timing (section 3.2 step 4 and the example in 3.3), and a bot that plays many seeds.
  * Usage: java ... rush.web.ModeSelfTest
  */
 public final class ModeSelfTest {
 
     /** The mode players start from the menu. */
-    private static final ModeFeatures MODE = ModeFeatures.STAGE1;
+    private static final ModeFeatures MODE = ModeFeatures.STAGE2;
     private static final int SCHEDULE_SEEDS = 5000;
     private static final int BOT_SEEDS = 200;
 
@@ -63,13 +64,15 @@ public final class ModeSelfTest {
         }
         check(m + "menu " + dishes, dishes.equals(List.of("Salad", "Burger", "Pasta")));
 
-        boolean onlyRegulars = true;
+        boolean vipSeen = false;
+        boolean criticSeen = false;
         for (long seed = 1; seed <= 300; seed++) {
             for (Customer c : allCustomers(GameSession.start(seed, MODE, 1))) {
-                onlyRegulars &= c.typeLabel().equals("Regular");
+                vipSeen |= c.typeLabel().equals("VIP");
+                criticSeen |= c.typeLabel().equals("Critic");
             }
         }
-        check(m + "every customer is a Regular (300 seeds)", onlyRegulars);
+        check(m + "VIPs and Critics arrive (300 seeds)", vipSeen && criticSeen);
 
         String json = StateJson.of(GameSession.start(11, MODE, 1));
         check(m + "state JSON carries mode and label",
@@ -77,7 +80,7 @@ public final class ModeSelfTest {
     }
 
     private static void unknownModes() {
-        for (String id : List.of("base", "", "STAGE1", "stage9")) {
+        for (String id : List.of("base", "", "STAGE2", "stage9")) {
             boolean threw;
             try {
                 ModeFeatures.fromId(id);
@@ -87,31 +90,59 @@ public final class ModeSelfTest {
             }
             check("unknown mode '" + id + "' is rejected", threw);
         }
-        check("high-score labels", ModeFeatures.labelFor("stage1").equals("Stage 1")
+        check("high-score labels", ModeFeatures.labelFor("stage2").equals("Stage 2")
                 && ModeFeatures.labelFor("other").equals("other"));
     }
 
-    // ------------------------------------------------------------------ arrivals
+    // ------------------------------------------------------------------ random VIP and Critic arrivals
 
     private static void scheduleInvariants() {
-        boolean sixRegulars = true;
+        boolean invariants = true;
+        boolean deterministic = true;
+        boolean twoVips = false;
+        boolean twoCritics = false;
+        boolean[] vipAt = new boolean[6];
+        boolean[] criticAt = new boolean[6];
         for (long seed = 1; seed <= SCHEDULE_SEEDS; seed++) {
-            sixRegulars &= labels(allCustomers(GameSession.start(seed, MODE, 1))).equals(Collections.nCopies(6, "Regular"))
-                    && turns(allCustomers(GameSession.start(seed, MODE, 1))).equals(List.of(1, 4, 7, 10, 13, 16));
+            List<Kind> k = ArrivalPlan.kinds(seed);
+            deterministic &= k.equals(ArrivalPlan.kinds(seed));
+            int vips = ArrivalPlan.count(k, Kind.VIP);
+            int critics = ArrivalPlan.count(k, Kind.CRITIC);
+            int regulars = ArrivalPlan.count(k, Kind.REGULAR);
+            invariants &= k.size() == 6 && vips >= 1 && critics >= 1 && regulars >= 2;
+            twoVips |= vips >= 2;
+            twoCritics |= critics >= 2;
+            for (int i = 0; i < 6; i++) {
+                vipAt[i] |= k.get(i) == Kind.VIP;
+                criticAt[i] |= k.get(i) == Kind.CRITIC;
+            }
         }
-        check(MODE.label() + " (" + SCHEDULE_SEEDS + " seeds): six Regulars on turns 1, 4, 7, 10, 13, 16", sixRegulars);
+        String m = MODE.label() + " schedule (" + SCHEDULE_SEEDS + " seeds): ";
+        check(m + ">= 1 VIP, >= 1 Critic, >= 2 Regulars", invariants);
+        check(m + "same seed, same schedule", deterministic);
+        boolean everySlot = true;
+        for (int i = 0; i < 6; i++) {
+            everySlot &= vipAt[i] && criticAt[i];
+        }
+        check(m + "every slot sees a VIP and a Critic (incl. turns 1 and 16)", everySlot);
+        check(m + "games with two VIPs and with two Critics occur", twoVips && twoCritics);
+        // The built game really uses the plan, on the fixed turns, and a replay rebuilds the same customers.
+        boolean matches = true;
+        for (long seed = 1; seed <= 200; seed++) {
+            GameSession g = GameSession.start(seed, MODE, 1);
+            List<Kind> plan = ArrivalPlan.kinds(seed);
+            List<Customer> all = allCustomers(g);
+            for (int i = 0; i < 6; i++) {
+                matches &= all.get(i).getArrivalTurn() == ArrivalPlan.ARRIVAL_TURNS[i]
+                        && all.get(i).typeLabel().equalsIgnoreCase(plan.get(i).name());
+            }
+        }
+        check("built games follow the plan on turns 1, 4, 7, 10, 13, 16 (200 seeds)", matches);
         GameSession a = GameSession.start(77, MODE, 1);
         AdapterSelfTest.playOut(a);
         GameSession b = GameSession.replay(77, MODE, 1, a.actionLog());
-        check("Continue (replay) rebuilds the same game and result", StateJson.of(a).equals(StateJson.of(b)));
-    }
-
-    private static List<Integer> turns(List<Customer> customers) {
-        List<Integer> out = new ArrayList<>();
-        for (Customer c : customers) {
-            out.add(c.getArrivalTurn());
-        }
-        return out;
+        check("Continue (replay) rebuilds the same schedule and result",
+                labels(allCustomers(a)).equals(labels(allCustomers(b))) && StateJson.of(a).equals(StateJson.of(b)));
     }
 
     // ------------------------------------------------------------------ eating and paying (brief 3.2 and 3.3)
@@ -121,7 +152,8 @@ public final class ModeSelfTest {
      */
     private static void briefExample() {
         MenuItem pasta = new MenuItem("Pasta", 1800, 2);
-        GameSession s = GameSession.startWith(2002, MODE, new int[] {1}, new Menu(List.of(pasta)));
+        GameSession s = GameSession.startWith(2002, MODE, new int[] {1}, List.of(Kind.REGULAR),
+                new Menu(List.of(pasta)));
         Customer c = s.game().getCustomers().get(0);
         String[][] script = {
             {"waiterSeat C1 T1", "chefWait"},
@@ -176,7 +208,8 @@ public final class ModeSelfTest {
         Map<Integer, MenuItem> dishOf = Map.of(1, salad, 2, pasta);
         int a = 1;
         for (int u = 1; u <= 2; u++) {
-            GameSession s = GameSession.startWith(31, MODE, new int[] {a}, new Menu(List.of(dishOf.get(u))));
+            GameSession s = GameSession.startWith(31, MODE, new int[] {a}, List.of(Kind.REGULAR),
+                    new Menu(List.of(dishOf.get(u))));
             Timeline t = playPerfect(s, "C1");
             int[] expected = {a, a + 1, a + u, a + u + 1, a + u + 2, a + u + 3, 100 - 8 * (u + 1)};
             int[] actual = {t.seated, t.orderTaken, t.ready, t.served, t.readyToPay, t.paid, t.recorded};

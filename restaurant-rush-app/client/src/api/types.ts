@@ -3,7 +3,7 @@
  * The front end only reads these; every rule is decided by the back end.
  */
 
-export type CustomerType = "Regular";
+export type CustomerType = "Regular" | "VIP" | "Critic";
 export type CustomerState = "WAITING" | "SEATED" | "ORDERED" | "EATING" | "READY_TO_PAY" | "PAID" | "LEFT";
 export type OrderStatus = "PENDING" | "PREPARING" | "READY" | "SERVED" | "PAID" | "CANCELLED";
 export type Phase = "WAITER" | "CHEF" | "SUMMARY" | "OVER";
@@ -116,7 +116,7 @@ export interface GameState {
   /** Which restaurant day this game is (1, 2, 3...). */
   day: number;
   mode: GameMode;
-  /** "Stage 1". */
+  /** "Stage 2". */
   modeLabel: string;
   menu: MenuEntry[];
   turn: number;
@@ -152,13 +152,13 @@ export interface ActionResponse {
 }
 
 /** The playable mode (see ModeFeatures on the server). */
-export type GameMode = "stage1";
+export type GameMode = "stage2";
 
 export interface ScoreEntry {
   date: string;
   day: number;
   mode: string;
-  /** Display name, e.g. "Stage 1". */
+  /** Display name, e.g. "Stage 2". */
   modeLabel: string;
   victory: boolean;
   stars: number;

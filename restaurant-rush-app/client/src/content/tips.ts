@@ -9,4 +9,7 @@ export const TIPS: string[] = [
   "You need 4 paying customers, $45 and an average satisfaction of 60 to win.",
   "The guest arriving on turn 16 can never pay in time. Focus on the others!",
   "Waiter tip: choose the job first, then pick the table. Keys A-D and 1-2 work too!",
+  "VIPs are patient (only -5 a turn) and get 10% off their bill.",
+  "Critics hate waiting. Serve them within 2 turns of ordering and they leave a glowing review.",
+  "Every game has at least one VIP and one Critic, but who arrives when changes from game to game.",
 ];

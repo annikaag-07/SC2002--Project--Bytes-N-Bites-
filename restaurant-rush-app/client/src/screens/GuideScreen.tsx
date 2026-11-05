@@ -29,6 +29,8 @@ const STEPS = [
 
 const NOTES: Record<CustomerType, string> = {
   Regular: "Loses 8 per waiting turn.",
+  VIP: "Loses 5 per turn and pays 10% less.",
+  Critic: "Loses 12 per turn. Served within 2 turns of ordering: +10. Slower: -10.",
 };
 
 export function GuideScreen({ ui }: { ui: StoreState }) {
@@ -84,7 +86,8 @@ export function GuideScreen({ ui }: { ui: StoreState }) {
             ))}
           </div>
           <p className="dim">
-            Every game has six Regular guests, arriving on turns 1, 4, 7, 10, 13 and 16.
+            Every game has six guests (on turns 1, 4, 7, 10, 13 and 16) with at least one VIP and one Critic; who arrives when
+            changes from game to game.
           </p>
           <p className="dim">
             The bar under each guest shows satisfaction. Below 80 their face turns a little red; below 60 they turn red and show anger

@@ -11,7 +11,7 @@ public final class EntityTestSupport {
 
     /**
      * Builds a restaurant with one table per customer, in which customer i was seated, ordered {@code item},
-     * had it cooked on turn 1 and was served on {@code servedTurns[i]}.
+     * had it taken and cooked on turn 1 and was served on {@code servedTurns[i]} (serving reactions apply).
      *
      * @param customers   customers in arrival order
      * @param servedTurns the turn each one was served
@@ -32,7 +32,7 @@ public final class EntityTestSupport {
                 order.advanceUnit(1);
             }
             order.markServed(servedTurns[i]);
-            customer.receiveServedOrder();
+            customer.receiveServedOrder(servedTurns[i]);
         }
         return restaurant;
     }

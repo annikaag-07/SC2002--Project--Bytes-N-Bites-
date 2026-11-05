@@ -85,9 +85,9 @@ public final class Waiter extends Staff {
             return ActionResult.fail(order.getId() + " only became READY this turn; it can be served next turn.");
         }
         order.markServed(turn);
-        order.getCustomer().receiveServedOrder();
+        String reaction = order.getCustomer().receiveServedOrder(turn);
         markActed();
         return ActionResult.ok("Waiter serves " + order.getId() + " (" + order.getItem().getName() + ") to "
-                + order.getCustomer().getId() + ". SERVED.");
+                + order.getCustomer().getId() + ". SERVED." + (reaction == null ? "" : " " + reaction));
     }
 }

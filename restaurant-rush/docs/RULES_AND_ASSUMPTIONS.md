@@ -63,3 +63,27 @@ This file is the single source of truth for how the game interprets the assignme
 | `ActionResult` in `control` | `ActionResult` in `entity` | Staff classes (entities) return it; keeping it in `entity` avoids an entity -> control dependency. |
 | Arrival turns in `GameConfig` | Arrival turns in `ArrivalSchedule` | The schedule already owns who arrives when; storing the turns twice would allow them to disagree. |
 | Scope check: a case-insensitive grep of `src/` for the names of the features the brief adds in later stages returns nothing | It matches only the word "unhappy" ("Unhappy departures", the brief's own section 3.5 wording). The check used is the same grep with `grep -vi unhappy` applied, which returns nothing. | Keeping the brief's terminology matters more than a literal substring match. |
+
+## 6. Stage 2: customer behaviour
+
+| Type | Loss per waiting turn | Bill | Special behaviour |
+|---|---|---|---|
+| Regular | 8 | Full price | None |
+| VIP | 5 | 10% off: `Money.percent(price, 90)` | None |
+| Critic | 12 | Full price | Service-speed reaction (below) |
+
+**Critic service-speed reaction.** When the Critic is served, the game compares `servedTurn - orderTakenTurn`.
+- **At most 2 turns: impressed.** +10 satisfaction, capped at 100.
+- **More than 2 turns: unimpressed.** -10 satisfaction, floored at 0. A served Critic never leaves because of this, since only customers still waiting for service can leave.
+
+The reaction is reported in the serve event.
+
+| # | Decision | Rationale |
+|---|---|---|
+| D12 | Critic threshold = 2 turns from order taken to served. | Every dish can meet it (Pasta: order and unit 1 on turn T, unit 2 on T+1, serve on T+2), so being impressed depends only on the manager giving the Critic kitchen and serving priority. That is a real trade-off against other customers. |
+| D13 | Base-setting arrivals: T1 Regular, T4 **VIP**, T7 Regular, T10 **Critic**, T13 Regular, T16 Regular (still six). | The brief allows replacing two Regulars. Putting the Critic late makes its priority compete with C5's chance to pay. |
+| D14 | Type-specific behaviour is dispatched through `Customer` methods: `satisfactionLossPerTurn()`, `applyCustomerPricing(long)` and `onServed(int)`, the last called from the final template `receiveServedOrder(int)`. `ArrivalSchedule` is the only class that names concrete customer types. | The brief requires polymorphism, not type-check chains, in the controller. |
+| D15 | VIP pricing happens when the order is taken (`BillCalculator`), and the price is then locked. | The price is locked at order time. |
+| D16 | `onServed` returns a short description of the reaction (or `null`) rather than `void`. | The reaction needs to reach the player as part of the serve event, without the controller knowing the customer type. |
+
+**Constrained-staff consequence (seed 2002).** From turn 7 on, the Waiter needs 10 tasks in turns 7 to 16 for C5 to pay by turn 18. Those 10 tasks fit only if the Critic's food is served 3 turns after ordering. So the manager must choose between an impressed Critic with 4 payers ($49.20, average 79.8) and an unimpressed Critic with 5 payers ($67.20, average 70.2). Both runs are scripted: `runs/stage2-victory.txt` and `runs/stage2-five-payers.txt`.

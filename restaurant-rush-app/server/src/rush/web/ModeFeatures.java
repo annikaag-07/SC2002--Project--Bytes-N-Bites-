@@ -4,13 +4,13 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * The web game's mode: {@code stage1}, the assignment's Stage 1 rules (Regular customers, the three-dish menu,
- * Waiter, Chef and Cashier). Kept as an enum so the API, the save file and the high-score file name the mode the
- * same way.
+ * The web game's mode: {@code stage2}, the assignment's Stage 2 rules (Regular, VIP and Critic customers, Waiter,
+ * Chef and Cashier) with a seeded random arrival plan ({@link ArrivalPlan}). Kept as an enum so the API, the save
+ * file and the high-score file name the mode the same way.
  */
 enum ModeFeatures {
 
-    STAGE1("stage1", "Stage 1");
+    STAGE2("stage2", "Stage 2");
 
     private final String id;
     private final String label;
@@ -23,7 +23,7 @@ enum ModeFeatures {
     /**
      * Looks up a mode by its API id.
      *
-     * @param id e.g. "stage1"
+     * @param id e.g. "stage2"
      * @return the mode
      * @throws IllegalArgumentException for an unknown id
      */
@@ -50,7 +50,7 @@ enum ModeFeatures {
      * Display name for a mode id (as stored in the high-score file).
      *
      * @param id a mode id
-     * @return e.g. "Stage 1", or the id itself if it is not a mode
+     * @return e.g. "Stage 2", or the id itself if it is not a mode
      */
     static String labelFor(String id) {
         return isKnown(id) ? fromId(id).label : id;
