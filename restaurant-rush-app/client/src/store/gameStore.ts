@@ -67,10 +67,12 @@ function loadPrefs(): Pick<StoreState, "skin" | "muted" | "theme" | "animSpeed">
 
 /** Sound to play for a successful command type. */
 const ACTION_SOUNDS: Record<string, SoundName> = {
+  hostSeat: "seat",
   waiterSeat: "seat",
   waiterTakeOrder: "order",
   waiterServe: "serve",
   chefCook: "cook",
+  happyHourYes: "happyHour",
 };
 
 class GameStore {

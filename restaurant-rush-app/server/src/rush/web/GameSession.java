@@ -17,8 +17,8 @@ import rush.web.ArrivalPlan.Kind;
 
 /**
  * Adapter between the web front end and the unchanged back end. Like the CLI's ConsoleUI it is a boundary:
- * it decides which role is asked next (Waiter, then Chef), forwards the chosen command to the
- * {@link GameController}, and closes the turn after the Chef. It never applies a game rule itself.
+ * it decides which role is asked next (Happy Hour while it is available, Host, Waiter, Chef), forwards the chosen
+ * command to the {@link GameController}, and closes the turn after the Chef. It never applies a game rule itself.
  * The Cashier charges in the back end's step 4, at the end of a turn (brief section 3.2).
  *
  * <p>Every successful command is appended to an action log. The game is deterministic for a seed, so replaying
@@ -27,7 +27,7 @@ import rush.web.ArrivalPlan.Kind;
 final class GameSession {
 
     /** The decision the front end should ask for next. */
-    enum Phase { WAITER, CHEF, SUMMARY, OVER }
+    enum Phase { HAPPY_HOUR, HOST, WAITER, CHEF, SUMMARY, OVER }
 
     private final long seed;
     private final ModeFeatures mode;
@@ -35,6 +35,7 @@ final class GameSession {
     private final ArrivalSchedule schedule;
     private final GameController game;
     private final List<String> actionLog = new ArrayList<>();
+    private boolean happyHourAnswered;
     private boolean over;
     private List<GameEvent> lastTurnEvents = List.of();
     private List<GameEvent> turnStartEvents = List.of();
@@ -55,7 +56,7 @@ final class GameSession {
      * @param day  which restaurant day this is (shown to players instead of the seed)
      */
     static GameSession start(long seed, ModeFeatures mode, int day) {
-        return begin(new GameSession(seed, mode, day, ArrivalPlan.ARRIVAL_TURNS, ArrivalPlan.kinds(seed),
+        return begin(new GameSession(seed, mode, day, ArrivalPlan.ARRIVAL_TURNS, ArrivalPlan.kinds(seed, mode),
                 Menu.standard()));
     }
 
@@ -117,6 +118,12 @@ final class GameSession {
             // The Chef acted, so endTurn() has run: show the summary until next() is called.
             return Phase.SUMMARY;
         }
+        if (game.isHappyHourAvailable() && !happyHourAnswered && !game.hasHostActed() && !game.hasWaiterActed()) {
+            return Phase.HAPPY_HOUR;
+        }
+        if (!game.hasHostActed() && !game.hasWaiterActed()) {
+            return Phase.HOST;
+        }
         if (!game.hasWaiterActed()) {
             return Phase.WAITER;
         }
@@ -143,6 +150,10 @@ final class GameSession {
                     + roleName(phase) + ").");
         }
         ActionResult result = switch (type) {
+            case "happyHourYes" -> game.activateHappyHour();
+            case "happyHourNo" -> ActionResult.ok("Happy Hour not started this turn.");
+            case "hostSeat" -> game.hostSeat(customer, table);
+            case "hostWait" -> game.hostWait();
             case "waiterSeat" -> game.waiterSeat(customer, table);
             case "waiterTakeOrder" -> game.waiterTakeOrder(customer);
             case "waiterServe" -> game.waiterServe(order);
@@ -153,6 +164,9 @@ final class GameSession {
         };
         if (!result.isSuccess()) {
             return result;
+        }
+        if (type.startsWith("happyHour")) {
+            happyHourAnswered = true;
         }
         actionLog.add(String.join("\t", type, customer, table, order));
         if (phaseOf(type) == Phase.CHEF) {
@@ -173,11 +187,18 @@ final class GameSession {
             return ActionResult.ok("Game over.");
         }
         turnStartEvents = game.beginTurn();
+        happyHourAnswered = false;
         lastTurnEvents = List.of();
         return ActionResult.ok("Turn " + game.getCurrentTurn() + " begins.");
     }
 
     private static Phase phaseOf(String type) {
+        if (type.startsWith("happyHour")) {
+            return Phase.HAPPY_HOUR;
+        }
+        if (type.startsWith("host")) {
+            return Phase.HOST;
+        }
         if (type.startsWith("waiter")) {
             return Phase.WAITER;
         }
@@ -189,6 +210,8 @@ final class GameSession {
 
     static String roleName(Phase phase) {
         return switch (phase) {
+            case HAPPY_HOUR -> "Manager";
+            case HOST -> "Host";
             case WAITER -> "Waiter";
             case CHEF -> "Chef";
             case SUMMARY -> "end-of-turn summary";
@@ -227,7 +250,7 @@ final class GameSession {
         return lastTurnEvents;
     }
 
-    /** Events at the start of the current turn: arrivals. */
+    /** Events at the start of the current turn: arrivals and continuing Happy Hour recovery. */
     List<GameEvent> turnStartEvents() {
         return turnStartEvents;
     }

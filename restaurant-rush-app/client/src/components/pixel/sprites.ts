@@ -36,7 +36,7 @@ function tint(color: string, mood: Mood): string {
 // ------------------------------------------------------------------ people
 
 type Head = "hair" | "slick" | "toque" | "beret" | "bald";
-type Item = "tray" | "notepad" | null;
+type Item = "menu" | "tray" | "notepad" | null;
 
 export interface Look {
   head: Head;
@@ -78,7 +78,7 @@ export function personSprite(look: Look, mood: Mood = "calm", id = "staff"): Spr
   const sleeveRows = look.item === "tray"
     ? [".rbbbaabbggg", ".rbbbaabbbr.", ".sbbbaabbbs."]
     : [".rbbbaabbbr.", ".rbbbaabbbr.", ".sbbbaabbbs."];
-  if (look.item === "notepad") {
+  if (look.item === "menu" || look.item === "notepad") {
     sleeveRows[1] = "krbbbaabbbr.";
     sleeveRows[2] = "ksbbbaabbbs.";
   }
@@ -114,7 +114,7 @@ export function personSprite(look: Look, mood: Mood = "calm", id = "staff"): Spr
       W: "#c9cde0",
       R: "var(--critic-beret)",
       g: "var(--tray)",
-      k: "#fff6d8",
+      k: look.item === "notepad" ? "#fff6d8" : "var(--menu-book)",
     },
   };
 }
@@ -169,8 +169,8 @@ export const CUSTOMER_LOOKS: Record<CustomerType, Look> = {
   Critic: { head: "beret", shirt: "var(--shirt-critic)", accent: "#c9cde0", item: "notepad" },
 };
 
-/** Staff looks; the Manager narrates the end-of-turn summary. */
-export const STAFF_LOOKS: Record<Role | "Manager" | "Cashier", Look> = {
+export const STAFF_LOOKS: Record<Role | "Cashier", Look> = {
+  Host: { head: "slick", shirt: "var(--host-vest)", accent: "var(--host-shirt)", sleeve: "var(--host-shirt)", item: "menu" },
   // The waiter's two menus are drawn as separate pixel cards (one per hand) by WaiterFigure.
   Waiter: { head: "hair", shirt: "var(--waiter-vest)", accent: "var(--waiter-shirt)", sleeve: "var(--waiter-shirt)" },
   Chef: { head: "toque", shirt: "var(--chef-jacket)", accent: "#c9cde0", neckerchief: "var(--chef-scarf)" },

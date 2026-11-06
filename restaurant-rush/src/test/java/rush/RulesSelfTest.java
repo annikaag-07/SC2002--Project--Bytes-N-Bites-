@@ -12,8 +12,10 @@ import rush.control.ArrivalSchedule;
 import rush.control.GameConfig;
 import rush.control.GameController;
 import rush.control.GameResult;
+import rush.control.HappyHourPolicy;
 import rush.entity.ActionResult;
 import rush.entity.Cashier;
+import rush.entity.ComboMeal;
 import rush.entity.CriticCustomer;
 import rush.entity.Customer;
 import rush.entity.CustomerState;
@@ -65,6 +67,12 @@ public final class RulesSelfTest {
         run("Critic unimpressed by slow service (-10, floored, never leaves)", RulesSelfTest::criticUnimpressed);
         run("base schedule: six arrivals including a VIP and a Critic", RulesSelfTest::baseScheduleTypes);
         run("no type checks in control or boundary", RulesSelfTest::noTypeChecksInControlOrBoundary);
+        // Stage 3: new role and menu policy
+        run("combo meals: summed units, 90% price, composition", RulesSelfTest::comboMeals);
+        run("Happy Hour pricing: VIP then Happy Hour, locked at order", RulesSelfTest::happyHourPricing);
+        run("Happy Hour: once per game, two turns, before staff act", RulesSelfTest::happyHourTiming);
+        run("Happy Hour recovery +15, capped, waiting customers only", RulesSelfTest::happyHourRecovery);
+        run("Host seats one extra customer, before the Waiter", RulesSelfTest::hostSeating);
 
         System.out.println();
         System.out.println("RulesSelfTest: " + passed + " checks passed, " + failed + " failed");
@@ -459,7 +467,225 @@ public final class RulesSelfTest {
         }
     }
 
+    private static void comboMeals() {
+        Menu menu = Menu.standard();
+        MenuItem saladPasta = menu.itemNamed("Salad + Pasta Combo");
+        check("Salad + Pasta combo = 2430 cents", saladPasta.getPriceCents() == 2430);
+        check("Salad + Pasta combo = 3 units", saladPasta.getPrepUnits() == 3);
+        MenuItem saladBurger = menu.itemNamed("Salad + Burger Combo");
+        check("Salad + Burger combo = 2160 cents, 2 units",
+                saladBurger.getPriceCents() == 2160 && saladBurger.getPrepUnits() == 2);
+        check("menu order: Salad, Burger, Pasta, two combos", menu.getOfferings().size() == 5
+                && menu.getOfferings().get(3) == saladBurger && menu.getOfferings().get(4) == saladPasta);
+        ComboMeal combo = (ComboMeal) saladPasta;
+        check("combo keeps both components", combo.getComponents().equals(
+                List.of(menu.itemNamed("Salad"), menu.itemNamed("Pasta"))));
+        check("combo description shows components", combo.describe().contains("$9.00 + $18.00"));
+        check("combo of combos rejected", throwsIllegalArgument(() -> new ComboMeal(combo, menu.itemNamed("Salad"))));
+        check("null component rejected", throwsIllegalArgument(() -> new ComboMeal(null, menu.itemNamed("Salad"))));
+        check("half-up rounding: 90% of $0.05 + $0.00 = $0.05",
+                new ComboMeal(new MenuItem("A", 5, 1), new MenuItem("B", 0, 1)).getPriceCents() == 5);
+
+        // A combo needs all its units before it is READY.
+        GameController game = typedGame("Salad + Pasta Combo", ArrivalSchedule.regulars(SEED, 1));
+        game.beginTurn();
+        ok(game.waiterSeat("C1", "T1"));
+        ok(game.chefWait());
+        game.endTurn();
+        game.beginTurn();
+        ok(game.waiterTakeOrder("C1"));
+        ok(game.chefAdvance("O1"));
+        game.endTurn();
+        game.beginTurn();
+        ok(game.waiterWait());
+        ok(game.chefAdvance("O1"));
+        game.endTurn();
+        Order order = game.getOrders().get(0);
+        check("combo 2/3 still PREPARING", order.getStatus() == OrderStatus.PREPARING);
+        check("combo locked at 2430", order.getLockedPriceCents() == 2430);
+    }
+
+    private static void happyHourPricing() {
+        check("VIP Burger during Happy Hour = 1080 ($10.80)",
+                happyHourPriceFor("Burger", VIPCustomer::new) == 1080);
+        check("Regular Pasta during Happy Hour = 1440", happyHourPriceFor("Pasta", RegularCustomer::new) == 1440);
+        check("VIP Salad + Pasta combo during Happy Hour = 2430 -> 2187 -> 1750",
+                happyHourPriceFor("Salad + Pasta Combo", VIPCustomer::new) == 1750);
+        check("Critic (full price) Burger during Happy Hour = 1200",
+                happyHourPriceFor("Burger", CriticCustomer::new) == 1200);
+
+        // An order taken before activation keeps its locked price; one taken during Happy Hour is discounted.
+        GameController game = typedGame("Pasta", ArrivalSchedule.regulars(SEED, 1, 1));
+        game.beginTurn();
+        ok(game.hostSeat("C1", "T1"));
+        ok(game.waiterSeat("C2", "T2"));
+        ok(game.chefWait());
+        game.endTurn();
+        game.beginTurn();
+        ok(game.waiterTakeOrder("C1"));
+        ok(game.chefWait());
+        game.endTurn();
+        game.beginTurn();
+        ok(game.activateHappyHour());
+        ok(game.waiterTakeOrder("C2"));
+        ok(game.chefWait());
+        game.endTurn();
+        check("order taken before activation keeps 1800", game.getOrders().get(0).getLockedPriceCents() == 1800);
+        check("order taken during Happy Hour locks 1440", game.getOrders().get(1).getLockedPriceCents() == 1440);
+    }
+
+    private static void happyHourTiming() {
+        GameController game = typedGame("Salad", ArrivalSchedule.regulars(SEED, 1));
+        game.beginTurn();
+        check("available at the start", game.isHappyHourAvailable() && game.getHappyHourRemainingTurns() == 0);
+        waitBoth(game);
+        fail(game.activateHappyHour());
+        check("cannot start after staff acted", game.isHappyHourAvailable());
+        game.endTurn();
+        game.beginTurn();
+        ok(game.hostWait());
+        fail(game.activateHappyHour());
+        waitBoth(game);
+        game.endTurn();
+        game.beginTurn();
+        ok(game.activateHappyHour());
+        check("activation turn: 2 remaining", game.getHappyHourRemainingTurns() == 2 && !game.isHappyHourAvailable());
+        fail(game.activateHappyHour());
+        waitBoth(game);
+        game.endTurn();
+        game.beginTurn();
+        check("next turn: 1 remaining", game.getHappyHourRemainingTurns() == 1);
+        fail(game.activateHappyHour());
+        waitBoth(game);
+        game.endTurn();
+        game.beginTurn();
+        check("third turn: over", game.getHappyHourRemainingTurns() == 0);
+        fail(game.activateHappyHour());
+        check("cannot be activated twice", !game.isHappyHourAvailable());
+        waitBoth(game);
+        game.endTurn();
+
+        HappyHourPolicy lastTurn = new HappyHourPolicy();
+        ok(lastTurn.activate(18));
+        check("activated on turn 18 covers one turn", lastTurn.remainingTurns(18, 18) == 1);
+        check("active on exactly two turns", lastTurn.isActive(18) && lastTurn.isActive(19) && !lastTurn.isActive(20)
+                && !lastTurn.isActive(17));
+    }
+
+    private static void happyHourRecovery() {
+        // C1 is served (EATING) by turn 3; C2 waits in the queue; C3 arrives on turn 4 at 100.
+        GameController game = typedGame("Salad", ArrivalSchedule.regulars(SEED, 1, 1, 4));
+        game.beginTurn();
+        ok(game.waiterSeat("C1", "T1"));
+        ok(game.chefWait());
+        game.endTurn();
+        game.beginTurn();
+        ok(game.waiterTakeOrder("C1"));
+        ok(game.chefAdvance("O1"));
+        game.endTurn();
+        game.beginTurn();
+        ok(game.waiterServe("O1"));
+        ok(game.chefWait());
+        game.endTurn();
+        Customer c1 = game.getCustomers().get(0);
+        Customer c2 = game.getCustomers().get(1);
+        check("before Happy Hour: C1 eating at 84, C2 queued at 76",
+                c1.getState() == CustomerState.EATING && c1.getSatisfaction() == 84 && c2.getSatisfaction() == 76);
+        game.beginTurn();
+        Customer c3 = game.getCustomers().get(2);
+        ok(game.activateHappyHour());
+        check("waiting C2 recovers 76 -> 91", c2.getSatisfaction() == 91);
+        check("eating/READY_TO_PAY C1 unaffected", c1.getSatisfaction() == 84);
+        check("new arrival capped at 100", c3.getSatisfaction() == 100);
+        waitBoth(game);
+        game.endTurn();
+        check("end of turn 4: C2 83, C1 READY_TO_PAY", c2.getSatisfaction() == 83
+                && c1.getState() == CustomerState.READY_TO_PAY);
+        game.beginTurn();
+        check("second active turn recovers at turn start: C2 83 -> 98", c2.getSatisfaction() == 98);
+        check("second active turn: C3 capped at 100", c3.getSatisfaction() == 100);
+        check("READY_TO_PAY C1 unaffected", c1.getSatisfaction() == 84);
+        waitBoth(game);
+        game.endTurn();
+        check("C1 paid with 84", c1.getState() == CustomerState.PAID && c1.getRecordedSatisfaction() == 84);
+        game.beginTurn();
+        check("after Happy Hour no recovery: C2 stays 90", c2.getSatisfaction() == 90);
+        waitBoth(game);
+        game.endTurn();
+
+        // A customer who has left is never affected.
+        GameController late = typedGame("Salad", ArrivalSchedule.regulars(SEED, 1, 14));
+        Customer gone = waitTurns(late, 13);
+        check("C1 left on turn 13", gone.getState() == CustomerState.LEFT);
+        late.beginTurn();
+        ok(late.activateHappyHour());
+        check("left customer stays at 0", gone.getSatisfaction() == 0 && gone.getState() == CustomerState.LEFT);
+        waitBoth(late);
+        late.endTurn();
+    }
+
+    private static void hostSeating() {
+        GameController game = typedGame("Salad", ArrivalSchedule.regulars(SEED, 1, 1, 1));
+        game.beginTurn();
+        ok(game.hostSeat("C2", "T1"));
+        fail(game.hostSeat("C1", "T2"));
+        ok(game.waiterSeat("C1", "T2"));
+        check("Host + Waiter seat two customers in one turn",
+                game.getFreeTables().isEmpty() && game.getQueue().size() == 1);
+        ok(game.chefWait());
+        game.endTurn();
+        game.beginTurn();
+        fail(game.hostSeat("C3", "T1"));
+        check("Host cannot seat without a free table; task kept", !game.hasHostActed());
+        ok(game.hostWait());
+        waitBoth(game);
+        game.endTurn();
+
+        GameController afterWaiter = typedGame("Salad", ArrivalSchedule.regulars(SEED, 1, 1));
+        afterWaiter.beginTurn();
+        ok(afterWaiter.waiterSeat("C1", "T1"));
+        fail(afterWaiter.hostSeat("C2", "T2"));
+        check("Host cannot act after the Waiter", !afterWaiter.hasHostActed() && afterWaiter.getQueue().size() == 1);
+        ok(afterWaiter.chefWait());
+        afterWaiter.endTurn();
+
+        GameController sameTurn = typedGame("Burger", ArrivalSchedule.regulars(SEED, 1, 1));
+        sameTurn.beginTurn();
+        ok(sameTurn.hostSeat("C1", "T1"));
+        ok(sameTurn.waiterTakeOrder("C1"));
+        check("Waiter takes the order of a customer the Host seated this turn",
+                sameTurn.getCustomers().get(0).getState() == CustomerState.ORDERED);
+        fail(sameTurn.hostSeat("C2", "T2"));
+        check("Host gets at most one seat per turn: C2 still queued", sameTurn.getQueue().size() == 1);
+        ok(sameTurn.chefAdvance("O1"));
+        sameTurn.endTurn();
+    }
+
     // ---------------------------------------------------------------- helpers
+
+    /** Price locked for one customer of the given type who orders on turn 2, with Happy Hour switched on that turn. */
+    private static long happyHourPriceFor(String itemName, ArrivalSchedule.CustomerFactory type) {
+        GameController game = typedGame(itemName, ArrivalSchedule.builder(SEED).add(1, type).build());
+        game.beginTurn();
+        ok(game.hostSeat("C1", "T1"));
+        waitBoth(game);
+        game.endTurn();
+        game.beginTurn();
+        ok(game.activateHappyHour());
+        ok(game.waiterTakeOrder("C1"));
+        ok(game.chefWait());
+        game.endTurn();
+        return game.getOrders().get(0).getLockedPriceCents();
+    }
+
+    private static boolean throwsIllegalArgument(Runnable action) {
+        try {
+            action.run();
+            return false;
+        } catch (IllegalArgumentException expected) {
+            return true;
+        }
+    }
 
     private static GameController typedGame(String itemName, ArrivalSchedule schedule) {
         Menu single = new Menu(List.of(Menu.standard().itemNamed(itemName)));

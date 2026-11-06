@@ -50,6 +50,10 @@ public final class ConsoleUI {
             out.println(RULE);
             printEvents(arrivals);
             printStartOfTurn();
+            if (game.isHappyHourAvailable()) {
+                promptHappyHour();
+            }
+            promptHost();
             promptWaiter();
             promptChef();
             out.println("-- Eating, payment, waiting --");
@@ -76,6 +80,7 @@ public final class ConsoleUI {
     private void printStartOfTurn() {
         out.println("Revenue: " + Money.format(game.getRevenueCents())
                 + " | Avg satisfaction (paid): " + game.getAverageSatisfactionText());
+        out.println("Happy Hour: " + happyHourStatus());
         out.println("Waiting queue: " + joinCustomers(game.getQueue()));
         StringJoiner tables = new StringJoiner("   ");
         for (Table table : game.getTables()) {
@@ -101,6 +106,7 @@ public final class ConsoleUI {
                     Money.format(order.getLockedPriceCents()));
         }
         out.println("Staff tasks available:");
+        out.println("  Host (1 seat):    seat " + joinCustomers(game.getQueue()) + " at " + joinTables(game.getFreeTables()));
         out.println("  Waiter (1 task):  seat " + joinCustomers(game.getQueue()) + " at " + joinTables(game.getFreeTables())
                 + " | take order " + joinCustomers(game.getCustomersAwaitingOrder())
                 + " | serve " + joinOrders(game.getServableOrders()));
@@ -140,6 +146,53 @@ public final class ConsoleUI {
     }
 
     // ---------------------------------------------------------------- manager prompts
+
+    private String happyHourStatus() {
+        int remaining = game.getHappyHourRemainingTurns();
+        if (remaining > 0) {
+            return "ACTIVE (" + remaining + " turn(s) remaining incl. this one): 20% off orders taken, +15 recovery";
+        }
+        return game.isHappyHourAvailable() ? "available (once per game, lasts 2 turns)" : "used";
+    }
+
+    private void promptHappyHour() {
+        while (true) {
+            String answer = input.readLine("Activate Happy Hour now? (y/n): ", "n").toLowerCase();
+            if (answer.equals("n") || answer.equals("no")) {
+                return;
+            }
+            if (answer.equals("y") || answer.equals("yes")) {
+                if (report(game.activateHappyHour())) {
+                    return;
+                }
+                continue;
+            }
+            out.println("  ! Please answer y or n.");
+        }
+    }
+
+    private void promptHost() {
+        while (true) {
+            out.println("Host: 1) Seat a queued customer  0) Wait");
+            String choice = input.readLine("Host choice: ", "0");
+            ActionResult result;
+            switch (choice) {
+                case "0":
+                    result = game.hostWait();
+                    break;
+                case "1":
+                    String customer = readId("  Customer to seat: ", "C");
+                    result = game.hostSeat(customer, readId("  Table: ", "T"));
+                    break;
+                default:
+                    out.println("  ! '" + choice + "' is not an option. Enter 0 or 1.");
+                    continue;
+            }
+            if (report(result)) {
+                return;
+            }
+        }
+    }
 
     private void promptWaiter() {
         while (true) {

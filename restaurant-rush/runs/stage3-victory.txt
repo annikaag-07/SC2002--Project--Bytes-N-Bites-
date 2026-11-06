@@ -1,0 +1,125 @@
+# Stage 3 victory run. Command: ./run.sh --seed 2002 < runs/stage3-victory.txt
+# Each turn asks, in order: Happy Hour (y/n, only while unused), Host, Waiter, Chef.
+# Arrivals: C1 Regular, C2 VIP, C3 Regular, C4 Critic, C5 Regular, C6 Regular.
+# Seed 2002 choices (5-item menu): C1 Burger, C2 Salad+Burger Combo, C3 Salad+Pasta Combo,
+# C4 Pasta, C5 Salad+Burger Combo, C6 Burger.
+# Strategy: the Host seats each arrival on its arrival turn, so the Waiter can take the order the
+# same turn and the Chef can start at once. Happy Hour is saved for the slow 3-unit combo (recovery).
+# --- Turn 1: no Happy Hour. Host seats C1; Waiter takes its order at once; Chef cooks the Burger.
+n
+1
+C1
+T1
+2
+C1
+1
+O1
+# --- Turn 2: serve O1.
+n
+0
+3
+O1
+0
+# --- Turn 3: nothing to do.
+n
+0
+0
+0
+# --- Turn 4: C2 (VIP) arrives. Host seats, Waiter takes order (combo $21.60 -> VIP $19.44), Chef unit 1.
+# C1 pays $15.00 at the end of this turn.
+n
+1
+C2
+T2
+2
+C2
+1
+O2
+# --- Turn 5: Chef finishes the combo.
+n
+0
+0
+1
+O2
+# --- Turn 6: serve O2.
+n
+0
+3
+O2
+0
+# --- Turn 7: C3 arrives. Host seats, Waiter takes order (Salad+Pasta Combo, 3 units), Chef unit 1.
+n
+1
+C3
+T1
+2
+C3
+1
+O3
+# --- Turn 8: Chef unit 2. C2 pays $19.44.
+n
+0
+0
+1
+O3
+# --- Turn 9: C3 is still waiting for food: switch on Happy Hour now for +15 recovery (84 -> 99).
+y
+0
+0
+1
+O3
+# --- Turn 10: (Happy Hour 2nd turn: C3 recovers to 100.) C4 Critic arrives: the Host seats it while
+# the Waiter serves O3.
+1
+C4
+T2
+3
+O3
+0
+# --- Turn 11: Waiter takes the Critic's order (Pasta); Chef unit 1.
+0
+2
+C4
+1
+O4
+# --- Turn 12: Chef unit 2. C3 pays $24.30.
+0
+0
+1
+O4
+# --- Turn 13: C5 arrives. Serve the Critic 2 turns after ordering -> IMPRESSED.
+0
+3
+O4
+0
+# --- Turn 14: Host seats C5; Waiter takes order (Salad+Burger Combo); Chef unit 1.
+1
+C5
+T1
+2
+C5
+1
+O5
+# --- Turn 15: Chef unit 2. Critic pays $18.00.
+0
+0
+1
+O5
+# --- Turn 16: C6 arrives. Serve O5 (C5 pays on turn 18).
+0
+3
+O5
+0
+# --- Turn 17: Host seats C6; Waiter takes its order; Chef cooks (too late to pay).
+1
+C6
+T2
+2
+C6
+1
+O6
+# --- Turn 18: serve O6. C5 pays $21.60.
+0
+3
+O6
+0

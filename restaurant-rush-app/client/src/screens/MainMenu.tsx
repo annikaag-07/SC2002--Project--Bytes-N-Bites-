@@ -12,9 +12,9 @@ import { store, type StoreState } from "@/store/gameStore";
 /** The game's mode (one card on "Start new game"). */
 const MODES: { mode: GameMode; name: string; text: string }[] = [
   {
-    mode: "stage2",
-    name: "Stage 2",
-    text: "Regular, VIP and Critic customers, the three-dish menu, Waiter, Chef and Cashier.",
+    mode: "stage3",
+    name: "Stage 3",
+    text: "Regular, VIP and Critic customers, a Host at the door, combo meals and a once-per-game Happy Hour.",
   },
 ];
 
@@ -74,7 +74,7 @@ export function MainMenu({ ui }: { ui: StoreState }) {
       </div>
       <div className="menu">
         <div className="menu-cast" aria-hidden>
-          <PixelSprite sprite={figureSprite(STAFF_LOOKS.Cashier, ui.skin)} scale={3} className="bob" />
+          <PixelSprite sprite={figureSprite(STAFF_LOOKS.Host, ui.skin)} scale={3} className="bob" />
           <PixelSprite sprite={figureSprite(STAFF_LOOKS.Chef, ui.skin)} scale={3} className="bob delay-1" />
           <PixelSprite sprite={figureSprite(STAFF_LOOKS.Waiter, ui.skin)} scale={3} className="bob delay-2" />
         </div>

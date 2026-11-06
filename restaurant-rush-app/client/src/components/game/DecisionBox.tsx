@@ -15,7 +15,7 @@ import { STAFF_LOOKS, figureSprite, type Skin } from "@/components/pixel/sprites
 import { sounds } from "@/sound/soundManager";
 import { store } from "@/store/gameStore";
 
-/** The news line: what happened as this turn started (arrivals). Payments happen at a turn's end. */
+/** The news line: what happened as this turn started (arrivals, Happy Hour). Payments happen at a turn's end. */
 function newsLines(game: GameState): string[] {
   return game.turnStartEvents
     .map((e) => e.text)
@@ -40,6 +40,9 @@ function situation(game: GameState, role: Role): string[] {
   const part = (t: typeof t1) => (t.occupant ? `${t.id} has ${t.occupant}` : `${t.id} is free`);
   const tables = !t1.occupant && !t2.occupant ? "Both tables are free." : `${part(t1)} and ${part(t2)}.`;
 
+  if (role === "Manager") {
+    lines.push("Happy Hour can be used once: this turn and the next, new orders are 20% off and waiting guests get +15.");
+  }
   if (role === "Chef") {
     const tickets = game.orders.filter((o) => o.status === "PENDING" || o.status === "PREPARING");
     lines.push(
@@ -62,12 +65,12 @@ function situation(game: GameState, role: Role): string[] {
   return lines;
 }
 
-function warnings(game: GameState): string[] {
+function warnings(game: GameState, role: Role): string[] {
   const out: string[] = [];
   const angry = game.customers.filter((x) => x.satisfaction < 60 && ["WAITING", "SEATED", "ORDERED"].includes(x.state));
   if (angry.length > 0) out.push(`Getting angry: ${angry.map((x) => `${x.id} (${x.satisfaction})`).join(", ")}!`);
   const critic = game.customers.find((x) => x.type === "Critic" && x.state === "ORDERED");
-  if (critic) out.push("The Critic is waiting: serve within 2 turns of ordering to impress.");
+  if (critic && role !== "Host") out.push("The Critic is waiting: serve within 2 turns of ordering to impress.");
   return out;
 }
 
@@ -171,7 +174,7 @@ export function DecisionBox({ game, skin, busy }: { game: GameState; skin: Skin;
             {line}
           </p>
         ))}
-        {warnings(game).map((line) => (
+        {warnings(game, decision.role).map((line) => (
           <p key={line} className="warning">
             {line}
           </p>

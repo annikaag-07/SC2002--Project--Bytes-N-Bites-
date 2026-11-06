@@ -1,0 +1,105 @@
+# Stage 3 defeat run. Command: ./run.sh --seed 2002 < runs/stage3-defeat.txt
+# Strategy: a manager who never uses Happy Hour (answers n) or the Host, and lets the kitchen idle.
+# Four customers pay, but slow service drags the average satisfaction below 60.
+# --- Turn 1: no Happy Hour. Host idle; Waiter seats C1.
+n
+0
+1
+C1
+T1
+0
+# --- Turn 2: take C1's order (Burger, $15.00). Chef idles.
+n
+0
+2
+C1
+0
+# --- Turn 3: Chef cooks O1.
+n
+0
+0
+1
+O1
+# --- Turn 4: C2 (VIP) arrives but the Host stays idle. Serve O1.
+n
+0
+3
+O1
+0
+# --- Turn 5: Waiter seats C2.
+n
+0
+1
+C2
+T2
+0
+# --- Turn 6: take C2's order (combo, VIP $19.44); Chef unit 1.
+n
+0
+2
+C2
+1
+O2
+# --- Turn 7: C3 arrives. Invalid: try to serve O2 before it is READY (rejected, re-asked). Then wait.
+n
+0
+3
+O2
+0
+1
+O2
+# --- Turn 8: serve O2.
+n
+0
+3
+O2
+0
+# --- Turn 9: seat C3.
+n
+0
+1
+C3
+T1
+0
+# --- Turn 10: C4 (Critic) arrives. Take C3's order (Salad+Pasta Combo, 3 units); Chef unit 1.
+n
+0
+2
+C3
+1
+O3
+# --- Turn 11: seat the Critic; Chef unit 2.
+n
+0
+1
+C4
+T2
+1
+O3
+# --- Turn 12: take the Critic's order (Pasta); Chef finishes C3's combo.
+n
+0
+2
+C4
+1
+O3
+# --- Turn 13: C5 arrives. Serve O3; Chef starts the Critic's Pasta.
+n
+0
+3
+O3
+1
+O4
+# --- Turn 14: Chef finishes the Pasta; the Waiter waits.
+n
+0
+0
+1
+O4
+# --- Turn 15: serve the Critic 3 turns after ordering -> UNIMPRESSED.
+n
+0
+3
+O4
+0
+# --- Turns 16-18: the input ends here; every remaining choice defaults to Wait.

@@ -15,6 +15,7 @@ export type SoundName =
   | "arrive"
   | "anger"
   | "leave"
+  | "happyHour"
   | "nextTurn"
   | "error"
   | "victory"
@@ -52,6 +53,9 @@ const RECIPES: Record<SoundName, { notes: Note[]; noise?: { at: number; len: num
   arrive: { notes: [{ f: N.E5, at: 0, len: 0.18, wave: "triangle", vol: 0.45 }, { f: N.C5, at: 0.18, len: 0.3, wave: "triangle", vol: 0.45 }] },
   anger: { notes: [{ f: 220, at: 0, len: 0.12, wave: "square", vol: 0.2 }, { f: 196, at: 0.13, len: 0.2, wave: "square", vol: 0.2 }] },
   leave: { notes: [{ f: N.G4, at: 0, len: 0.15, wave: "square" }, { f: N.E4, at: 0.15, len: 0.15, wave: "square" }, { f: N.C4, at: 0.3, len: 0.35, wave: "square", slideTo: 200 }] },
+  happyHour: {
+    notes: [N.C5, N.E5, N.G5, N.C6, N.G5, N.C6].map((f, i) => ({ f, at: i * 0.07, len: 0.08, wave: "square" as Wave, vol: 0.25 })),
+  },
   nextTurn: { notes: [{ f: N.C5, at: 0, len: 0.05, wave: "triangle", vol: 0.35 }, { f: N.G5, at: 0.05, len: 0.08, wave: "triangle", vol: 0.35 }] },
   error: { notes: [{ f: 150, at: 0, len: 0.12, wave: "square", vol: 0.2 }, { f: 150, at: 0.15, len: 0.12, wave: "square", vol: 0.2 }] },
   victory: {

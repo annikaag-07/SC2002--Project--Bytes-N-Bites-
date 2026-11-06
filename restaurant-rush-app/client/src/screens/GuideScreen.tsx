@@ -4,7 +4,13 @@ import { PixelSprite } from "@/components/pixel/Pixel";
 import { CUSTOMER_LOOKS, STAFF_LOOKS, figureSprite } from "@/components/pixel/sprites";
 import { store, type StoreState } from "@/store/gameStore";
 
-const STAFF: { role: "Waiter" | "Chef"; text: string }[] = [
+const STAFF: { role: "Host" | "Waiter" | "Chef"; text: string }[] = [
+  {
+    role: "Host",
+    text:
+      "Stands by the door. Each turn the Host may seat one guest from the queue at a free table, or wait. " +
+      "The Host acts first, so the Waiter can take that guest's order in the same turn.",
+  },
   {
     role: "Waiter",
     text:
@@ -15,12 +21,15 @@ const STAFF: { role: "Waiter" | "Chef"; text: string }[] = [
   {
     role: "Chef",
     text:
-      "Cooks one unit per turn, after the Waiter. Salad and Burger take 1 unit, Pasta 2. Finished dishes go on the counter as READY and can be served from the next turn.",
+      "Cooks one unit per turn, after the Waiter. Salad and Burger take 1 unit, Pasta 2, combos the sum of their " +
+      "dishes. Finished dishes go on the counter as READY and can be served from the next turn.",
   },
 ];
 
 const STEPS = [
   "A guest may arrive (turns 1, 4, 7, 10, 13, 16) and joins the queue outside.",
+  "Optionally start Happy Hour (once per game).",
+  "Host: seat someone or wait.",
   "Waiter: seat, take an order, serve, or wait.",
   "Chef: cook one unit of an order, or wait.",
   "Eating and payment: the Cashier charges one guest who became ready to pay on an earlier turn (oldest first) and frees their table. Then guests served on an earlier turn finish eating and become ready to pay.",

@@ -1,9 +1,10 @@
 import type { GameState } from "@/api/types";
 import { store, type StoreState } from "@/store/gameStore";
 
-/** Top bar: menu, turn progress, the three victory targets, mode/day, and toggles. */
+/** Top bar: menu, turn progress, the three victory targets, Happy Hour, mode/day, and toggles. */
 export function Hud({ game, ui, onLog }: { game: GameState; ui: StoreState; onLog: () => void }) {
   const avg = game.averageSatisfaction;
+  const hh = game.happyHour;
   const met = {
     paid: game.paidCount >= game.targets.paid,
     revenue: game.revenueCents >= game.targets.revenueCents,
@@ -30,6 +31,10 @@ export function Hud({ game, ui, onLog }: { game: GameState; ui: StoreState; onLo
       </span>
       <span className={`stat ${met.avg ? "met" : ""}`}>
         Avg <strong>{avg}</strong>/{game.targets.averageSatisfaction}
+      </span>
+      <span className={`stat ${hh.remainingTurns > 0 ? "happy" : ""}`}>
+        Happy Hour{" "}
+        <strong>{hh.remainingTurns > 0 ? `ON ${hh.remainingTurns}` : hh.available ? "ready" : "used"}</strong>
       </span>
       <span className="hud-spacer" />
       <span className="mode-label">

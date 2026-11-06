@@ -11,7 +11,7 @@ import java.nio.charset.StandardCharsets;
 /**
  * Reads the manager's input one line at a time. When input is piped from a script it echoes every line so
  * saved logs read like an interactive session, skips {@code #} comment lines, and after end of input answers
- * every prompt with its default (Wait / No) instead of failing.
+ * every prompt with its default (Wait, or No for yes/no questions) instead of failing.
  */
 final class InputReader {
 

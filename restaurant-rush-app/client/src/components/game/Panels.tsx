@@ -7,7 +7,7 @@ import { store } from "@/store/gameStore";
 function tone(text: string): string {
   if (/leaves unhappy|UNIMPRESSED/.test(text)) return "ev-bad";
   if (/collects|IMPRESSED/.test(text)) return "ev-good";
-  if (/arrives/.test(text)) return "ev-info";
+  if (/arrives|Happy Hour/.test(text)) return "ev-info";
   if (/waits/.test(text)) return "ev-dim";
   return "";
 }
@@ -110,7 +110,7 @@ export function GameOver({ game }: { game: GameState }) {
           <button className="btn" onClick={() => store.goTo("scores")}>
             High scores
           </button>
-          <button className="btn btn-primary" onClick={() => void store.newGame("stage2")}>
+          <button className="btn btn-primary" onClick={() => void store.newGame("stage3")}>
             Play again
           </button>
         </div>

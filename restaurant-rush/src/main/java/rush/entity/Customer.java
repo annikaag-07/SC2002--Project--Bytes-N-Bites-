@@ -97,6 +97,21 @@ public abstract class Customer {
     }
 
     /**
+     * Recovery rule (Happy Hour): a customer still waiting for a table or for food gains {@code points}
+     * satisfaction, capped at 100. Customers who are eating, ready to pay, paid or gone are unaffected.
+     *
+     * @param points satisfaction to add
+     * @return true if the customer was eligible (even if already at 100)
+     */
+    public final boolean recoverWhileWaiting(int points) {
+        if (!state.isAwaitingService()) {
+            return false;
+        }
+        changeSatisfaction(points);
+        return true;
+    }
+
+    /**
      * Tells whether this customer is still waiting for service but has no satisfaction left, and so must leave.
      *
      * @return true if the customer should leave now

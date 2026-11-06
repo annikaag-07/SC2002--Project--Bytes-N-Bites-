@@ -6,8 +6,8 @@
 export type CustomerType = "Regular" | "VIP" | "Critic";
 export type CustomerState = "WAITING" | "SEATED" | "ORDERED" | "EATING" | "READY_TO_PAY" | "PAID" | "LEFT";
 export type OrderStatus = "PENDING" | "PREPARING" | "READY" | "SERVED" | "PAID" | "CANCELLED";
-export type Phase = "WAITER" | "CHEF" | "SUMMARY" | "OVER";
-export type Role = "Waiter" | "Chef";
+export type Phase = "HAPPY_HOUR" | "HOST" | "WAITER" | "CHEF" | "SUMMARY" | "OVER";
+export type Role = "Manager" | "Host" | "Waiter" | "Chef";
 
 export interface Customer {
   id: string;
@@ -25,6 +25,8 @@ export interface Order {
   id: string;
   customerId: string;
   item: string;
+  /** Base dishes to draw (a combo has two). */
+  components: string[];
   status: OrderStatus;
   unitsDone: number;
   prepUnits: number;
@@ -115,8 +117,8 @@ export interface GameState {
   seed: string;
   /** Which restaurant day this game is (1, 2, 3...). */
   day: number;
-  mode: GameMode;
-  /** "Stage 2". */
+  mode: GameMode | "classic";
+  /** "Stage 3" (or "Classic" for a game started through the API). */
   modeLabel: string;
   menu: MenuEntry[];
   turn: number;
@@ -129,6 +131,7 @@ export interface GameState {
   servedCount: number;
   departureCount: number;
   targets: { paid: number; revenueCents: number; revenue: string; averageSatisfaction: number };
+  happyHour: { available: boolean; remainingTurns: number };
   queue: string[];
   tables: Table[];
   customers: Customer[];
@@ -137,7 +140,7 @@ export interface GameState {
   cashierNext: string | null;
   /** Events of the turn that just closed (shown on the summary). */
   turnSummary: GameEvent[];
-  /** What happened as this turn started: arrivals. (Payment is at the end of a turn.) */
+  /** What happened as this turn started: arrivals and Happy Hour recovery. (Payment is at the end of a turn.) */
   turnStartEvents: GameEvent[];
   /** Every event so far, oldest first (for the Log). */
   log: GameEvent[];
@@ -151,14 +154,14 @@ export interface ActionResponse {
   state: GameState;
 }
 
-/** The playable mode (see ModeFeatures on the server). */
-export type GameMode = "stage2";
+/** The playable mode (see ModeFeatures on the server). "classic" exists only through the API. */
+export type GameMode = "stage3";
 
 export interface ScoreEntry {
   date: string;
   day: number;
   mode: string;
-  /** Display name, e.g. "Stage 2". */
+  /** Display name, e.g. "Stage 3". */
   modeLabel: string;
   victory: boolean;
   stars: number;

@@ -9,6 +9,7 @@ import rush.entity.Cashier;
 import rush.entity.Chef;
 import rush.entity.Customer;
 import rush.entity.CustomerState;
+import rush.entity.Host;
 import rush.entity.Menu;
 import rush.entity.Money;
 import rush.entity.Order;
@@ -18,18 +19,22 @@ import rush.entity.Waiter;
 
 /**
  * The turn engine. It runs the turn steps in their fixed order, accepts the manager's commands for each
- * staff member, enforces "Waiter before Chef" and one task per staff member per turn, and exposes read-only
- * state and the valid targets for each task. It never reads input or prints.
+ * staff member, enforces the execution order (Happy Hour decision, Host, Waiter, Chef) and one task per staff
+ * member per turn, and exposes read-only state and the valid targets for each task. It never reads input or prints.
  *
- * <p>A turn is driven as: {@link #beginTurn()} (arrivals), one Waiter command, one Chef command,
- * then {@link #endTurn()} (payment, eating, waiting and abandonment).</p>
+ * <p>A turn is driven as: {@link #beginTurn()} (arrivals, continuing Happy Hour recovery), optionally
+ * {@link #activateHappyHour()}, at most one Host command, one Waiter command, one Chef command, then
+ * {@link #endTurn()} (payment, eating, waiting and abandonment). Once a later step has acted, earlier ones are
+ * closed for the turn: the Host cannot act after the Waiter, and Happy Hour cannot start after any staff act.</p>
  */
 public final class GameController {
 
     private final GameConfig config;
     private final ArrivalSchedule schedule;
     private final Restaurant restaurant;
-    private final BillCalculator billCalculator = new BillCalculator();
+    private final HappyHourPolicy happyHour = new HappyHourPolicy();
+    private final BillCalculator billCalculator = new BillCalculator(happyHour);
+    private final Host host = new Host();
     private final Waiter waiter = new Waiter();
     private final Chef chef = new Chef();
     private final Cashier cashier = new Cashier();
@@ -52,9 +57,10 @@ public final class GameController {
     // ---------------------------------------------------------------- turn steps
 
     /**
-     * Starts the next turn: resets every staff member's task and runs step 1, arrivals.
+     * Starts the next turn: resets every staff member's task, runs step 1 (arrivals) and, on the second turn
+     * of an active Happy Hour, applies its start-of-turn recovery.
      *
-     * @return the arrival events
+     * @return the arrival and recovery events
      */
     public List<GameEvent> beginTurn() {
         if (turnInProgress || isGameOver()) {
@@ -62,6 +68,7 @@ public final class GameController {
         }
         currentTurn++;
         turnInProgress = true;
+        host.startTurn();
         waiter.startTurn();
         chef.startTurn();
         cashier.startTurn();
@@ -71,8 +78,54 @@ public final class GameController {
             events.add(event(customer.getId() + " (" + customer.typeLabel()
                     + ") arrives and joins the waiting queue with satisfaction " + customer.getSatisfaction() + "."));
         }
+        if (happyHour.isActive(currentTurn)) {
+            events.add(event(happyHour.applyRecovery(restaurant.getCustomers())));
+        }
         eventLog.addAll(events);
         return events;
+    }
+
+    /**
+     * Manager decision at the start of a turn, before any staff act: switch Happy Hour on (once per game).
+     * Its recovery is applied immediately for this turn.
+     *
+     * @return the outcome, including who recovered
+     */
+    public ActionResult activateHappyHour() {
+        if (!turnInProgress) {
+            return ActionResult.fail("No turn is in progress.");
+        }
+        if (host.hasActedThisTurn() || waiter.hasActedThisTurn()) {
+            return ActionResult.fail("Happy Hour can only be switched on at the start of a turn, before any staff act.");
+        }
+        ActionResult activated = happyHour.activate(currentTurn);
+        if (!activated.isSuccess()) {
+            return activated;
+        }
+        return record(ActionResult.ok(activated.getMessage() + " "
+                + happyHour.applyRecovery(restaurant.getCustomers())));
+    }
+
+    /**
+     * Host command: seat a queued customer at a free table. Only before the Waiter acts.
+     *
+     * @param customerId any customer in the queue
+     * @param tableId    a free table
+     * @return the outcome; on failure the Host's task is still available
+     */
+    public ActionResult hostSeat(String customerId, String tableId) {
+        ActionResult turnCheck = checkHostMayAct();
+        return turnCheck != null ? turnCheck : record(host.seat(restaurant, customerId, tableId));
+    }
+
+    /**
+     * Host command: do nothing this turn.
+     *
+     * @return the outcome
+     */
+    public ActionResult hostWait() {
+        ActionResult turnCheck = checkHostMayAct();
+        return turnCheck != null ? turnCheck : record(host.waitTurn());
     }
 
     /**
@@ -316,6 +369,21 @@ public final class GameController {
         return payable.isEmpty() ? Optional.empty() : Optional.of(payable.get(0));
     }
 
+    /** @return true if Happy Hour has not been used yet */
+    public boolean isHappyHourAvailable() {
+        return happyHour.isAvailable();
+    }
+
+    /** @return Happy Hour turns left including this one, or 0 if it is not active */
+    public int getHappyHourRemainingTurns() {
+        return happyHour.remainingTurns(currentTurn, config.getTotalTurns());
+    }
+
+    /** @return true if the Host has used this turn's task */
+    public boolean hasHostActed() {
+        return host.hasActedThisTurn();
+    }
+
     /** @return true if the Waiter has used this turn's task */
     public boolean hasWaiterActed() {
         return waiter.hasActedThisTurn();
@@ -332,6 +400,16 @@ public final class GameController {
     }
 
     // ---------------------------------------------------------------- helpers
+
+    private ActionResult checkHostMayAct() {
+        if (!turnInProgress) {
+            return ActionResult.fail("No turn is in progress.");
+        }
+        if (waiter.hasActedThisTurn()) {
+            return ActionResult.fail("The Host acts before the Waiter, and the Waiter has already acted this turn.");
+        }
+        return null;
+    }
 
     private ActionResult checkWaiterMayAct() {
         if (!turnInProgress) {

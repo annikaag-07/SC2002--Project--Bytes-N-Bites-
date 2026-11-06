@@ -87,3 +87,32 @@ The reaction is reported in the serve event.
 | D16 | `onServed` returns a short description of the reaction (or `null`) rather than `void`. | The reaction needs to reach the player as part of the serve event, without the controller knowing the customer type. |
 
 **Constrained-staff consequence (seed 2002).** From turn 7 on, the Waiter needs 10 tasks in turns 7 to 16 for C5 to pay by turn 18. Those 10 tasks fit only if the Critic's food is served 3 turns after ordering. So the manager must choose between an impressed Critic with 4 payers ($49.20, average 79.8) and an unimpressed Critic with 5 payers ($67.20, average 70.2). Both runs are scripted: `runs/stage2-victory.txt` and `runs/stage2-five-payers.txt`.
+
+## 7. Stage 3: new role and menu policy
+
+### Host
+
+- The Host seats at most **one** queued customer per turn at a free table, **in addition to** the Waiter. The Waiter can still seat.
+- Host options: `1` seat a chosen queued customer at a chosen free table, `0` wait. Invalid choices are explained and re-asked, and the task is not used up.
+- Execution order within step 3: **Happy Hour decision -> Host -> Waiter -> Chef**. Because the Host acts first, the Waiter may take the order of a customer the Host seated this turn.
+
+### ComboMeal
+
+- `ComboMeal extends MenuItem` and is **composed of** two base `MenuItem`s (it keeps references to both). Preparation units = sum of the components' units; price = `Money.percent(sum of component prices, 90)`. The constructor rejects null components and combos of combos.
+- Menu offerings, in order: Salad ($9.00, 1), Burger ($15.00, 1), Pasta ($18.00, 2), **Salad + Burger Combo** ($21.60, 2), **Salad + Pasta Combo** ($24.30, 3).
+
+### Happy Hour
+
+- At the start of each turn (after arrivals and the state display, before any staff act), while Happy Hour has not been used, the manager is asked `Activate Happy Hour now? (y/n)`. It can be activated **once per game** and is active on the activation turn and the next (activated on turn 18, it covers one turn). The display shows `ACTIVE (n turn(s) remaining incl. this one)`, `available` or `used`.
+- **Recovery:** on each active turn, before any staff act, every WAITING, SEATED or ORDERED customer gains +15 satisfaction (capped at 100). LEFT, EATING, READY_TO_PAY and PAID customers are unaffected.
+- **Discount:** orders **taken** while Happy Hour is active get 20% off.
+- **Pricing pipeline (`BillCalculator`, one place, rounding half up after each step):** `base = item price` (a combo is already at 90%) -> `afterCustomer = customer.applyCustomerPricing(base)` (VIP 90%) -> `final = Happy Hour active ? 80% of afterCustomer : afterCustomer` -> `order.lockPrice(final)`. Example: VIP Burger in Happy Hour = 1500 -> 1350 -> **1080** ($10.80).
+- The price is locked when the order is taken. Happy Hour never changes orders already placed, and never affects customers who have left.
+
+| # | Decision | Rationale |
+|---|---|---|
+| D17 | Combo choice rule: each customer draws uniformly over all **5** offerings with its own seeded generator (rule D6); a combo is ordered exactly when the draw lands on a combo. | Keeps one simple, reproducible rule; combos are ordinary offerings. |
+| D18 | Order within a turn: Happy Hour decision, then Host, then Waiter, then Chef. The controller enforces it by closing earlier steps once a later one has acted: the Host cannot act after the Waiter, and Happy Hour cannot be activated after the Host or Waiter has acted. The Host and the Happy Hour decision are optional (not acting = Wait / No). | The Host seats first so the Waiter can take that customer's order in the same turn. Closing rather than requiring earlier steps keeps the Stage 1/2 controller contract (Waiter then Chef) unchanged. |
+| D19 | On the activation turn, recovery is applied at the moment of activation (after the start-of-turn display). On the second active turn it is applied in `beginTurn`, right after arrivals, so the start-of-turn display already shows recovered values. | Both happen before any staff act, as required. |
+| D20 | Activating Happy Hour while nobody is waiting is allowed; the recovery then has no effect. | It is a manager choice; wasting it is a valid (bad) decision. |
+| D21 | A newly arrived customer (satisfaction 100) is eligible for recovery but is capped at 100. | Follows directly from "maximum 100". |

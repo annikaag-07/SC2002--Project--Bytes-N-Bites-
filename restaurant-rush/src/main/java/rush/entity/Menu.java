@@ -22,15 +22,18 @@ public final class Menu {
     }
 
     /**
-     * Builds the base-setting menu: Salad $9.00 (1 unit), Burger $15.00 (1 unit), Pasta $18.00 (2 units).
+     * Builds the base-setting menu: Salad $9.00 (1 unit), Burger $15.00 (1 unit), Pasta $18.00 (2 units),
+     * then the combos Salad + Burger ($21.60, 2 units) and Salad + Pasta ($24.30, 3 units).
      *
      * @return the standard menu
      */
     public static Menu standard() {
-        return new Menu(List.of(
-                new MenuItem("Salad", 900, 1),
-                new MenuItem("Burger", 1500, 1),
-                new MenuItem("Pasta", 1800, 2)));
+        MenuItem salad = new MenuItem("Salad", 900, 1);
+        MenuItem burger = new MenuItem("Burger", 1500, 1);
+        MenuItem pasta = new MenuItem("Pasta", 1800, 2);
+        return new Menu(List.of(salad, burger, pasta,
+                new ComboMeal(salad, burger),
+                new ComboMeal(salad, pasta)));
     }
 
     /** @return the offerings in menu order (unmodifiable) */

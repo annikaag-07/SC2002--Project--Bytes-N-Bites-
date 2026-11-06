@@ -129,6 +129,54 @@ export const STOVE_THEMED: Sprite = {
   palette: { k: "var(--stove-frame)", g: "var(--stove-body)", d: "var(--stove-inner)", o: "var(--burner)", y: "#f7c948" },
 };
 
+// ------------------------------------------------------------------ host pedestal (14 x 9) and accessory
+// 9 rows tall (was 12) so the host's upper body shows clearly; same width and bottom anchor.
+
+export function pedestalSprite(theme: ThemeId): Sprite {
+  const body = (x: number) => (theme === "cafe" ? (x % 3 === 0 ? "B" : "b") : "b");
+  const rows = grid(14, 9, (x, y) => {
+    if (y === 0) return "t";
+    if (y === 1) return "T";
+    if (y === 7) return theme === "tokyo" ? "g" : "b";
+    if (y === 8) return "r";
+    if (x === 0 || x === 13) return ".";
+    if (theme === "tokyo" && (x === 1 || x === 12)) return "g";
+    if (y === 3 || y === 6) return "r";
+    return body(x);
+  });
+  return {
+    rows,
+    palette: {
+      t: "var(--pedestal-top)",
+      T: "var(--pedestal-shade)",
+      b: "var(--pedestal-body)",
+      B: "var(--pedestal-shade)",
+      r: "var(--pedestal-trim)",
+      g: "var(--table-gold)",
+    },
+  };
+}
+
+/** Small item on top of the pedestal: glowing reservation book, brass lamp + plant, or a paper lantern. */
+export function pedestalAccessory(theme: ThemeId): Sprite {
+  if (theme === "cafe") {
+    return {
+      rows: [".yyy......", "yyyyy..gg.", ".yyy..gggg", "..k...gggg", "..k....gg.", ".kkk..pppp", ".kkk..pppp"],
+      palette: { y: "#ffe2a0", k: "#c9963f", g: "#5aa04a", p: "#b0623a" },
+    };
+  }
+  if (theme === "tokyo") {
+    return {
+      rows: ["....k.....", "...ggg....", "..rrrrr...", "..rwrwr...", "..rrrrr...", "...ggg..mm", "........mm"],
+      palette: { k: "#24150f", g: "#e6b422", r: "#e8473d", w: "#ffb08a", m: "#f7ead2" },
+    };
+  }
+  return {
+    rows: ["..........", "..........", "..cccccc..", ".cwwccwwc.", ".cwwccwwc.", "..cccccc..", ".........."],
+    palette: { c: "#6ee7ff", w: "#d8fbff" },
+  };
+}
+
 // ------------------------------------------------------------------ cashier booth (32 x 12) and its items
 // 12 rows tall (was 16) so the cashier's upper body shows clearly; same width and position.
 

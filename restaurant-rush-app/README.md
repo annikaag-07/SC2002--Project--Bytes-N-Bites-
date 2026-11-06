@@ -20,7 +20,7 @@ Open **http://localhost:8090**. For development with hot reload (API on 8090, Vi
 ./dev.sh
 ```
 
-Self-tests: `AdapterSelfTest` replays the CLI's Stage 2 scripts (with the CLI's fixed arrivals) and Stage 1 scripts (six Regulars) through the web adapter and compares every event line with the CLI logs, and checks save/replay and the decision questions. `ModeSelfTest` checks the mode, the random arrival schedule over 5,000 seeds, the payment timing (including the brief's section 3.3 example row by row) and plays 200 seeds with a bot:
+Self-tests: `AdapterSelfTest` replays the CLI's Stage 3 scripts through the web adapter in `classic` mode and compares every event line with the CLI logs, and checks save/replay and the decision questions. `ModeSelfTest` checks the mode, the random arrival schedule over 5,000 seeds, the payment timing (including the brief's section 3.3 example row by row) and plays 200 seeds with a bot:
 
 ```bash
 ./test.sh
@@ -39,17 +39,17 @@ browser (React)                              Java (JDK only)
                                              GameController, entities  (UNCHANGED back end)
 ```
 
-- **(a) Adapter/API**: `client/src/api/` (types and fetch calls) and `server/src/rush/web/`. `GameSession` plays the same role as the CLI's `ConsoleUI`. It decides whose turn it is (Waiter → Chef, then the end-of-turn summary) and forwards each choice to `GameController`.
+- **(a) Adapter/API**: `client/src/api/` (types and fetch calls) and `server/src/rush/web/`. `GameSession` plays the same role as the CLI's `ConsoleUI`. It decides whose turn it is (Happy Hour → Host → Waiter → Chef, then the end-of-turn summary) and forwards each choice to `GameController`.
 - **(b) Store**: `client/src/store/gameStore.ts` holds the latest server snapshot plus UI-only state (screen, skin, mute), runs the API calls and fires sound hooks.
 - **(c) UI**: `client/src/screens/` and `client/src/components/`. Components only render state and send the chosen action.
 
 ### Mode
 
-New game offers one mode, **Stage 2** (`mode=stage2`). `server/src/rush/web/ModeFeatures.java` names it for the API, the save file and the high-score file. Any other mode is an HTTP 400 error, and a save that names another mode is discarded and treated as "no save".
+New game offers one mode, **Stage 3** (`mode=stage3`). `server/src/rush/web/ModeFeatures.java` also has `classic` (API only): the same rules with the terminal game's fixed arrivals (Regular, VIP, Regular, Critic, Regular, Regular), used by the parity test against the CLI logs and never shown in the UI. Any other mode is an HTTP 400 error, and a save that names another mode is discarded and treated as "no save".
 
 ### Arrivals
 
-Arrival turns never change: 1, 4, 7, 10, 13 and 16. `server/src/rush/web/ArrivalPlan.java` picks each slot as Regular 50 / VIP 25 / Critic 25 (named constants), then repairs the result so every game has at least 1 VIP, at least 1 Critic and at least 2 Regulars. A VIP or Critic can land on any slot, including turns 1 and 16, and can appear more than once. The schedule is a pure function of the seed with its own seeded generator, so Continue rebuilds the same customers and the customers' food choices are unaffected.
+Arrival turns never change: 1, 4, 7, 10, 13 and 16. `server/src/rush/web/ArrivalPlan.java` picks each slot as Regular 50 / VIP 25 / Critic 25 (named constants), then repairs the result so every game has at least 1 VIP, at least 1 Critic and at least 2 Regulars. A VIP or Critic can land on any slot, including turns 1 and 16, and can appear more than once. The schedule is a pure function of (seed, mode) with its own seeded generator, so Continue rebuilds the same customers and the customers' food choices are unaffected.
 
 ### Eating and payment
 
@@ -59,7 +59,7 @@ All rules stay in the Java back end. The list of options for each role (and the 
 
 Options that need a target come with **follow-up questions** (`steps`), and the UI asks them one at a time without ever picking for the player:
 
-- **Seat (Waiter):** "Who should I seat?", then always "Which table should I seat them at?". The first question is skipped when only one person is waiting.
+- **Seat:** "Who should I seat?", then always "Which table should I seat them at?". The first question is skipped when only one person is waiting.
 - **Take order:** "Which table should I take the order from?"
 - **Serve:** "Which table should I serve?"
 - **Cook (Chef):** "Which order should I cook?"
@@ -71,14 +71,14 @@ The table questions list both tables. A table where the job makes no sense is sh
 | Method | Path | Returns |
 |---|---|---|
 | GET | `/api/status` | `{ hasSave, hasGame }` |
-| POST | `/api/new?mode=stage2` | game state (unknown or missing mode: 400) |
+| POST | `/api/new?mode=stage3\|classic` | game state (unknown or missing mode: 400) |
 | POST | `/api/continue` | game state (replays the save) |
 | GET | `/api/state` | game state |
 | POST | `/api/action?type=&customer=&table=&order=` | `{ result, events, state }` |
 | POST | `/api/next` | `{ result, events, state }`; leaves the end-of-turn summary |
 | GET | `/api/highscores` | top 10 scores |
 
-Action types: `waiterSeat`, `waiterTakeOrder`, `waiterServe`, `waiterWait`, `chefCook`, `chefWait`.
+Action types: `happyHourYes`, `happyHourNo`, `hostSeat`, `hostWait`, `waiterSeat`, `waiterTakeOrder`, `waiterServe`, `waiterWait`, `chefCook`, `chefWait`.
 
 ### Saving and high scores
 
@@ -92,9 +92,9 @@ Action types: `waiterSeat`, `waiterTakeOrder`, `waiterServe`, `waiterWait`, `che
 - **Who wears what**: `STAFF_LOOKS` and `CUSTOMER_LOOKS` in `client/src/components/pixel/sprites.ts`.
 - **Pixel art**: the sprites are character grids in `client/src/components/pixel/sprites.ts`. Their colours come from `theme.css`, and each staff member's or customer type's outfit is in `STAFF_LOOKS` / `CUSTOMER_LOOKS`.
 - **Penguin skin**: the Penguins toggle in the menu or HUD swaps every figure for a penguin wearing the same colours.
-- **Sounds**: every effect is synthesised in the browser (Web Audio chiptune) in `client/src/sound/soundManager.ts`, so no audio files are needed. The effects are click, select, back, seat, order, cook, serve, pay, arrive, anger, leave, next turn, error, victory and game over. To use a recorded sound instead, put it in `client/public/sounds/` and add it to `CUSTOM_FILES`.
+- **Sounds**: every effect is synthesised in the browser (Web Audio chiptune) in `client/src/sound/soundManager.ts`, so no audio files are needed. The effects are click, select, back, seat, order, cook, serve, pay, arrive, anger, leave, happy hour, next turn, error, victory and game over. To use a recorded sound instead, put it in `client/public/sounds/` and add it to `CUSTOM_FILES`.
 - **Keyboard**: A-D pick an option, 1-9 answer a "which table?" question, Esc goes back.
-- **Restaurant themes**: Neon Nights (default), Cozy Café and Tokyo Diner, chosen from **Restaurant themes** on the main menu (with live preview). The colours of each theme are in `theme.css` under `[data-theme="..."]`. Prop patterns (tables, chairs, lamps, door, cashier booth, decorations) are in `client/src/components/pixel/themeSprites.ts`. Every prop has the same size in every theme, so positions and movement are identical and a theme can never affect gameplay.
+- **Restaurant themes**: Neon Nights (default), Cozy Café and Tokyo Diner, chosen from **Restaurant themes** on the main menu (with live preview). The colours of each theme are in `theme.css` under `[data-theme="..."]`. Prop patterns (tables, chairs, lamps, door, pedestal, cashier booth, decorations) are in `client/src/components/pixel/themeSprites.ts`. Every prop has the same size in every theme, so positions and movement are identical and a theme can never affect gameplay.
 - **Character movement**: `client/src/animation/choreography.ts` turns each back-end result (state before/after, the action, and its events) into short walking segments between fixed waypoints (`data-anchor` in `World.tsx`). `useChoreography.ts` plays them. The back end has already resolved the action, so the movement only replays it. Input is locked until it finishes, with a safety timeout so the game can never get stuck. The **Moves** button switches between 1x, 2x and off.
 - **Waiter menus**: the waiter carries two "MENUS" cards. One is placed on a table when a guest is seated and picked up when the order is taken. This is shown from the state only.
 - **Paying flow (visual)**: see "Eating and payment" above. Revenue, satisfaction and table availability come only from the back end.
@@ -102,9 +102,10 @@ Action types: `waiterSeat`, `waiterTakeOrder`, `waiterServe`, `waiterWait`, `che
 
 ## Decisions to flag
 
-0. **Mode.** New game offers **Stage 2**; picking it starts the game.
-1. **Chef options** come from the back end: cook one unit / wait.
-2. **End of turn**: after the Chef chooses, the server closes the turn: payment, eating, waiting penalties and departures. The UI shows a summary, and **Start turn N ▶** begins the next turn.
-3. **Payment timing.** The brief's timing (see "Eating and payment" above).
-4. **Arrivals**: a guest arrives on turns 1, 4, 7, 10, 13 and 16 (every 3rd turn). Who arrives comes from `ArrivalPlan` on the server (see "Arrivals" above); the UI does not schedule anything.
-5. Each new game uses a random seed internally; players see the Day number and stars instead.
+0. **Mode.** New game offers **Stage 3**; picking it starts the game. `mode=classic` (API only) reproduces the CLI exactly and is used by `./test.sh`.
+1. **Host and Chef options** come from the back end: Host = seat / wait, Chef = cook one unit / wait.
+2. **Happy Hour** has no staff owner in the back end, so it is asked by a **Manager** character at the start of a turn, as in the CLI.
+3. **End of turn**: after the Chef chooses, the server closes the turn: payment, eating, waiting penalties and departures. The UI shows a summary, and **Start turn N ▶** begins the next turn.
+4. **Payment timing.** The brief's timing (see "Eating and payment" above).
+5. **Arrivals**: a guest arrives on turns 1, 4, 7, 10, 13 and 16 (every 3rd turn). Who arrives comes from `ArrivalPlan` on the server (see "Arrivals" above); the UI does not schedule anything.
+6. Each new game uses a random seed internally; players see the Day number and stars instead.

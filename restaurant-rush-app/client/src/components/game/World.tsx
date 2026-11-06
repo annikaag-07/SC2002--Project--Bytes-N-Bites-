@@ -1,6 +1,6 @@
 /**
- * The restaurant scene, drawn from the current state. Positions of the door, tables (T1/T2 centres), waiter
- * spot and kitchen are fixed by CSS and do not depend on the theme.
+ * The restaurant scene, drawn from the current state. Positions of the door, host spot, tables (T1/T2
+ * centres), waiter spot and kitchen are fixed by CSS and do not depend on the theme.
  *
  * Movement: when the store has an animation plan, useChoreography walks "ghost" sprites between the
  * [data-anchor] waypoints below and hides the scene element each ghost stands in for (keys such as
@@ -25,6 +25,8 @@ import {
   doorSprite,
   kitchenDecor,
   lampSprite,
+  pedestalAccessory,
+  pedestalSprite,
   signDecor,
   tableSprite,
 } from "@/components/pixel/themeSprites";
@@ -38,7 +40,7 @@ function StateTag({ customer, order }: { customer: Customer; order: Order | unde
     case "ORDERED":
       return order ? (
         <span className={`tag pop-in ${order.servableNow ? "tag-ready" : ""}`} key="ordered">
-          <Food names={[order.item]} scale={2} /> {order.servableNow ? "Food's ready!" : "Waiting"}
+          <Food names={order.components} scale={2} /> {order.servableNow ? "Food's ready!" : "Waiting"}
         </span>
       ) : null;
     case "EATING":
@@ -55,7 +57,7 @@ function StateTag({ customer, order }: { customer: Customer; order: Order | unde
 }
 
 /** A staff member at their home spot. The sprite (not the name tag) is hidden while their ghost walks. */
-function Staff({ role, skin, active, hidden, anchor }: { role: "Waiter" | "Chef"; skin: Skin; active: boolean; hidden: boolean; anchor: string }) {
+function Staff({ role, skin, active, hidden, anchor }: { role: "Host" | "Waiter" | "Chef"; skin: Skin; active: boolean; hidden: boolean; anchor: string }) {
   return (
     <div className={`staff ${active ? "is-active" : ""}`}>
       <span className="staff-figure" data-anchor={anchor} style={{ visibility: hidden ? "hidden" : undefined }}>
@@ -135,7 +137,7 @@ export function World({ game, ui, theme }: { game: GameState; ui: StoreState; th
               {tickets.length === 0 && <span className="dim">No tickets on the rail</span>}
               {tickets.map((o) => (
                 <div key={o.id} className="ticket drop-in">
-                  <Food names={[o.item]} scale={2} />
+                  <Food names={o.components} scale={2} />
                   <span>
                     {o.id} · {byId(o.customerId).table ?? ""}
                   </span>
@@ -163,7 +165,7 @@ export function World({ game, ui, theme }: { game: GameState; ui: StoreState; th
                   className={`ready pop-in ${o.servableNow ? "servable" : ""}`}
                   style={{ visibility: isHidden(`ready-${o.id}`) ? "hidden" : undefined }}
                 >
-                  <Food names={[o.item]} scale={3} />
+                  <Food names={o.components} scale={3} />
                   <small>
                     {o.item} ready{o.servableNow ? "" : " (next turn)"}
                   </small>
@@ -198,9 +200,23 @@ export function World({ game, ui, theme }: { game: GameState; ui: StoreState; th
             <PixelSprite sprite={doorSprite(theme)} scale={3} title="Door" />
           </div>
 
-          {/* where the Waiter meets a new guest by the door before walking them to a table */}
-          <div className="door-meet-spot" aria-hidden>
-            <i className="anchor-mark mark-door-meet" data-anchor="door-meet" />
+          <div className="host-spot">
+            <div className={`staff host ${role === "Host" ? "is-active" : ""}`}>
+              <span className="host-stand">
+                <span className="staff-figure" data-anchor="host-home" style={{ visibility: isHidden("staff-Host") ? "hidden" : undefined }}>
+                  <PixelSprite sprite={figureSprite(STAFF_LOOKS.Host, skin)} scale={3} title="Host" />
+                </span>
+                {/* the pedestal sits in front of the host, so only the upper body shows */}
+                <span className="pedestal" aria-hidden>
+                  <span className="pedestal-item">
+                    <PixelSprite sprite={pedestalAccessory(theme)} scale={2} />
+                  </span>
+                  <PixelSprite sprite={pedestalSprite(theme)} scale={3} />
+                </span>
+                <i className="anchor-mark mark-host-meet" data-anchor="host-meet" />
+              </span>
+              <span className="name-tag">Host</span>
+            </div>
           </div>
 
           <span className="corner-decor" aria-hidden>
@@ -245,7 +261,7 @@ export function World({ game, ui, theme }: { game: GameState; ui: StoreState; th
                   )}
                   {atTable?.state === "EATING" && order && !isHidden(`plate-${table.id}`) && (
                     <span className="plate pop-in">
-                      <Food names={[order.item]} scale={2} />
+                      <Food names={order.components} scale={2} />
                     </span>
                   )}
                 </div>

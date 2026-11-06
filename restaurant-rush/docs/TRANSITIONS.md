@@ -77,3 +77,89 @@ The turn engine (`GameController`), the staff classes other than the one-line `W
 | Modified | `restaurant-rush-app/server/test/rush/web/ModeSelfTest.java` | Arrival-plan invariants over 5,000 seeds; Stage 2 mode, timing and bot checks. |
 | Modified | `restaurant-rush-app/test.sh` | Header comment. |
 | Rebuilt | `restaurant-rush-app/client/dist/` | The built front end (`./build.sh`): D `assets/index-Bff8UhqO.css`, D `assets/index-BpanGB2h.js`, A `assets/index-CjDSG55d.css`, A `assets/index-fNLw5Akj.js`, M `index.html`. The asset names carry a content hash. |
+
+## Stage 2 → Stage 3: New role and menu policy
+
+Compare: https://github.com/annikaag-07/SC2002--Project--Bytes-N-Bites-/compare/stage-2...stage-3
+
+### New files
+
+| File | Purpose |
+|---|---|
+| `src/main/java/rush/entity/Host.java` | New staff role (`extends Staff`): seats at most one queued customer per turn, reusing the seating rule in `Restaurant.seatCustomer`. |
+| `src/main/java/rush/entity/ComboMeal.java` | `extends MenuItem`, **composed of** two base items: summed preparation units, 90% of the combined price (half up). Rejects null and nested combos; `describe()` shows the components. |
+| `src/main/java/rush/control/HappyHourPolicy.java` | The Happy Hour policy: once-per-game activation, the 2-turn active window and remaining count, the 20% discount step and the +15 start-of-turn recovery. |
+| `runs/stage3-victory.txt`, `runs/stage3-defeat.txt`, `runs/stage3-features-demo.txt` | Scripted Stage 3 runs (the demo shows Host seating, combos, Happy Hour recovery and discount, VIP and Critic behaviour). |
+| `runs/logs/stage3-victory.log`, `runs/logs/stage3-defeat.log`, `runs/logs/stage3-features-demo.log` | Saved transcripts of the three runs, produced by `./test.sh`. |
+
+### Modified files
+
+| File | What changed | Why (design reason) |
+|---|---|---|
+| `src/main/java/rush/control/GameController.java` | Registers the Host (`hostSeat`, `hostWait`, reset each turn) and the Happy Hour phase (`activateHappyHour`, recovery on the second active turn in `beginTurn`). Adds read-only queries (`isHappyHourAvailable`, `getHappyHourRemainingTurns`, `hasHostActed`) and the ordering rule that closes the Host step once the Waiter acts and the Happy Hour offer once any staff act. | The turn engine owns the step order, so the new step and the new phase must be registered here. The existing Waiter/Chef/Cashier logic and the end-of-turn steps are unchanged. |
+| `src/main/java/rush/control/BillCalculator.java` | Takes the `HappyHourPolicy` in its constructor and adds the Happy Hour step after customer pricing: menu (combo already 90%) -> customer (VIP 90%) -> Happy Hour (80%) -> lock. | This is the single pricing place, and the brief fixes the stacking order (VIP first, then Happy Hour, locked at order time). |
+| `src/main/java/rush/entity/Menu.java` | `standard()` now also registers the two combos (Salad + Burger, Salad + Pasta) after the three base items. | A small registration change: combos are built from the same base item objects. |
+| `src/main/java/rush/entity/Customer.java` | Added `public final boolean recoverWhileWaiting(int points)`: +points (max 100), only while WAITING / SEATED / ORDERED. | Recovery is a satisfaction rule on the customer's own state, so it belongs with `applyWaitingPenalty()`. It is `final` so subclasses cannot change who is eligible. |
+| `src/main/java/rush/boundary/ConsoleUI.java` | Asks the Happy Hour question (only while it is available), adds the Host prompt before the Waiter, and shows the Happy Hour status and the Host's valid targets. | The boundary must collect the new decisions and show the new state. It still only forwards commands to the controller. |
+| `src/main/java/rush/boundary/InputReader.java` | Javadoc only: end of input answers "No" to yes/no questions. | Documents behaviour that the Happy Hour prompt now uses. No code change. |
+| `src/test/java/rush/RulesSelfTest.java` | Added 5 Stage 3 test groups (combos, Happy Hour pricing, timing and recovery, Host seating and ordering). Stage 1 and 2 test groups are unchanged. | Evidence for the new rules and that the old ones still hold. |
+| `runs/expected.txt` | Replaced the Stage 2 lines with the three Stage 3 runs. | Earlier scripts do not answer the new Host and Happy Hour prompts; they and their logs are kept and replayed from their tags. |
+| `docs/RULES_AND_ASSUMPTIONS.md`, `docs/TEST_NOTES.md` | Stage 3 sections (rules, decisions D17 to D21, new tests, Runs 6 to 8). | Documentation. |
+| `docs/TRANSITIONS.md` | This section. | Change analysis. |
+| `README.md` | Final README (overview, build/run, how to play, runs, rules, architecture, transitions, video timestamps). | Final documentation. |
+
+`MenuItem` was **not** changed: its public constructor already allowed `ComboMeal` to subclass it. `Waiter`, `Chef`, `Cashier`, `Restaurant`, `Order`, `Table`, the customer subclasses, `ArrivalSchedule` and `GameConfig` were not changed either.
+
+### Deleted files
+
+None.
+
+### Evidence earlier behaviour is preserved
+
+- All 10 Stage 1 and all 7 Stage 2 test groups in `RulesSelfTest` pass unchanged under Stage 3 (22 groups, 468 checks, 0 failures). They drive only the Waiter and Chef, which still works, because the Host step and the Happy Hour offer are optional and only *closed* by later steps (rule D18).
+- The spec section 3.3 walkthrough still gives 92 / 84 / 76 / 76 / READY_TO_PAY / PAID 1800 with 76 recorded.
+- `./test.sh` at `stage-3` prints `ALL CHECKS PASSED`, and the worktree checks of `stage-1` and `stage-2` still pass on their own.
+
+### Design note
+
+New behaviour came in as new classes plugged into existing extension points:
+
+- **Host** reuses the `Staff` task-per-turn base class and the existing `Restaurant.seatCustomer` rule. No seating logic was copied.
+- **ComboMeal** is a `MenuItem`, so `Order`, `Chef`, `Menu`, the customers' choice rule and `BillCalculator` handle it without changes (Liskov substitution). It overrides only `describe()`.
+- **Happy Hour** is a separate policy object in `control`, so pricing (`BillCalculator`) and the turn engine call it instead of growing conditionals. The VIP step is still dispatched through `Customer.applyCustomerPricing`.
+
+The only edits to existing classes are registrations (controller step and phase, menu entries, pricing step) and the matching prompts in the boundary. The polymorphism grep (`instanceof` / `getClass()` in `control` and `boundary`) and the BCE grep (`System.out` / `Scanner` in `control` and `entity`) both still return nothing.
+
+### Web game
+
+| Status | File | What changed |
+|---|---|---|
+| Modified | `README.md` | Stage 3 mode: the Host, combo meals and Happy Hour. |
+| Modified | `restaurant-rush-app/README.md` | Stage 3 mode, the API-only `classic` mode, the Host and Happy Hour actions. |
+| Modified | `restaurant-rush-app/client/public/sounds/README.txt` | Lists the Happy Hour sound. |
+| Modified | `restaurant-rush-app/client/src/animation/choreography.ts` | The Host's seating walk and the menu drop; combo orders. |
+| Modified | `restaurant-rush-app/client/src/api/types.ts` | Manager and Host roles and phases, combo `components`, the `happyHour` state; `GameMode` is `stage3`. |
+| Modified | `restaurant-rush-app/client/src/components/ThemePicker.tsx` | Host and pedestal in the theme preview. |
+| Modified | `restaurant-rush-app/client/src/components/game/DecisionBox.tsx` | Happy Hour explanation for the Manager; role-aware warnings. |
+| Modified | `restaurant-rush-app/client/src/components/game/Hud.tsx` | Happy Hour chip. |
+| Modified | `restaurant-rush-app/client/src/components/game/Panels.tsx` | Happy Hour events; Play again starts `stage3`. |
+| Modified | `restaurant-rush-app/client/src/components/game/World.tsx` | The Host at their pedestal (replaces the door waypoint); combos drawn as two dishes. |
+| Modified | `restaurant-rush-app/client/src/components/pixel/Pixel.tsx` | Doc comment: a combo's food icon shows both dishes. |
+| Modified | `restaurant-rush-app/client/src/components/pixel/sprites.ts` | Host and Manager looks and the menu-book item. |
+| Modified | `restaurant-rush-app/client/src/components/pixel/themeSprites.ts` | Pedestal sprite per theme. |
+| Modified | `restaurant-rush-app/client/src/content/tips.ts` | Host, combo and Happy Hour tips. |
+| Modified | `restaurant-rush-app/client/src/screens/GuideScreen.tsx` | Host, combo and Happy Hour sections. |
+| Modified | `restaurant-rush-app/client/src/screens/MainMenu.tsx` | The Stage 3 mode card; the Host in the cast. |
+| Modified | `restaurant-rush-app/client/src/sound/soundManager.ts` | Happy Hour jingle. |
+| Modified | `restaurant-rush-app/client/src/store/gameStore.ts` | Sounds for `hostSeat` and `happyHourYes`. |
+| Modified | `restaurant-rush-app/client/src/styles.css` | Host spot, pedestal, Happy Hour chip and preview styles (the door waypoint styles go). |
+| Modified | `restaurant-rush-app/client/src/theme/theme.css` | Host, pedestal and menu-book colours. |
+| Modified | `restaurant-rush-app/server/src/rush/web/ArrivalPlan.java` | `kinds(seed, mode)`: `classic` uses the terminal game's fixed list. |
+| Modified | `restaurant-rush-app/server/src/rush/web/GameSession.java` | Happy Hour and Host phases; the menu with combos. |
+| Modified | `restaurant-rush-app/server/src/rush/web/ModeFeatures.java` | `stage3` and the API-only `classic` mode. |
+| Modified | `restaurant-rush-app/server/src/rush/web/StateJson.java` | Happy Hour state, combo components, Host and Happy Hour decisions. |
+| Modified | `restaurant-rush-app/server/src/rush/web/WebServer.java` | Javadoc: `mode=stage3` or `mode=classic`. |
+| Modified | `restaurant-rush-app/server/test/rush/web/AdapterSelfTest.java` | `classic`-mode parity with the CLI's Stage 3 logs. |
+| Modified | `restaurant-rush-app/server/test/rush/web/ModeSelfTest.java` | Host timelines, mixed dishes and the classic fixed list. |
+| Modified | `restaurant-rush-app/test.sh` | Header comment. |
+| Rebuilt | `restaurant-rush-app/client/dist/` | The built front end (`./build.sh`): A `assets/index-CYuGBQO2.js`, D `assets/index-CjDSG55d.css`, A `assets/index-e2PfZ8Ka.css`, D `assets/index-fNLw5Akj.js`, M `index.html`, M `sounds/README.txt`. The asset names carry a content hash. |

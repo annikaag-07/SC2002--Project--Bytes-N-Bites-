@@ -1,6 +1,7 @@
 # <script-file> <seed> <VICTORY|DEFEAT>
-# Stage 1 scripts (stage1-*.txt) are kept for reference but are not replayed here: they were written for
-# the Stage 1 all-Regular schedule. Run them from the stage-1 tag (see docs/TEST_NOTES.md).
-stage2-victory.txt 2002 VICTORY
-stage2-defeat.txt 2002 DEFEAT
-stage2-five-payers.txt 2002 VICTORY
+# Earlier stages' scripts (stage1-*.txt, stage2-*.txt) and their logs are kept for reference but are not
+# replayed here: they were written for the earlier menus and prompts. Replay them from the stage-1 and
+# stage-2 tags (see docs/TEST_NOTES.md).
+stage3-victory.txt 2002 VICTORY
+stage3-defeat.txt 2002 DEFEAT
+stage3-features-demo.txt 2002 VICTORY

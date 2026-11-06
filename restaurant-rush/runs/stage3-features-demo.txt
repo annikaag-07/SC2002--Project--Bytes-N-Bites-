@@ -1,0 +1,105 @@
+# Stage 3 features demo. Command: ./run.sh --seed 2002 < runs/stage3-features-demo.txt
+# Shows: Host seating (and the Waiter taking that customer's order the same turn), an invalid Host
+# choice, combo orders, Happy Hour activation with +15 recovery and discounted locked prices (VIP then
+# Happy Hour), an order placed before Happy Hour keeping its price, and the Critic's speed reaction.
+# Each turn asks, in order: Happy Hour (y/n, only while unused), Host, Waiter, Chef.
+# --- Turn 1: Host seats C1. Waiter and Chef wait.
+n
+1
+C1
+T1
+0
+0
+# --- Turn 2: Waiter takes C1's order BEFORE Happy Hour: Burger locked at full $15.00.
+n
+0
+2
+C1
+0
+# --- Turn 3: Chef cooks O1.
+n
+0
+0
+1
+O1
+# --- Turn 4: C2 (VIP) arrives. Switch on Happy Hour: C1 (still waiting for food) recovers +15.
+# Host seats C2; Waiter takes C2's order the same turn:
+# Salad+Burger Combo $21.60 -> VIP 90% $19.44 -> Happy Hour 80% $15.55. O1 keeps its $15.00.
+y
+1
+C2
+T2
+2
+C2
+1
+O2
+# --- Turn 5: Happy Hour 2nd turn (recovery at turn start). Serve O1; Chef finishes the combo.
+0
+3
+O1
+1
+O2
+# --- Turn 6: Happy Hour is over. Serve O2.
+0
+3
+O2
+0
+# --- Turn 7: C3 arrives. Invalid: Host tries T1, but C1 has not paid yet (no table is free).
+# The Host is asked again without losing its task, and waits.
+1
+C3
+T1
+0
+0
+0
+# --- Turn 8: Host seats C3 at T1; Waiter takes the order (Salad+Pasta Combo, 3 units, $24.30).
+1
+C3
+T1
+2
+C3
+1
+O3
+# --- Turn 9: Chef unit 2 of 3.
+0
+0
+1
+O3
+# --- Turn 10: C4 (Critic) arrives. Host seats the Critic; Waiter takes its order (Pasta);
+# the Chef switches to the Critic's order to serve it fast.
+1
+C4
+T2
+2
+C4
+1
+O4
+# --- Turn 11: Chef finishes the Critic's Pasta.
+0
+0
+1
+O4
+# --- Turn 12: serve the Critic 2 turns after ordering -> IMPRESSED (+10). Chef finishes C3's combo.
+0
+3
+O4
+1
+O3
+# --- Turn 13: C5 arrives (both tables busy). Serve O3.
+0
+3
+O3
+0
+# --- Turn 14: still no free table until the Critic pays at the end of this turn.
+0
+0
+0
+# --- Turn 15: Host seats C5 at T2; Waiter takes the order; Chef starts it.
+1
+C5
+T2
+2
+C5
+1
+O5
+# --- Turns 16-18: the input ends here; remaining choices default to Wait.

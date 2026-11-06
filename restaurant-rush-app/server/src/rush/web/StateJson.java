@@ -6,6 +6,7 @@ import java.util.Optional;
 import rush.control.GameController;
 import rush.control.GameEvent;
 import rush.control.GameResult;
+import rush.entity.ComboMeal;
 import rush.entity.Customer;
 import rush.entity.MenuItem;
 import rush.entity.Money;
@@ -43,6 +44,8 @@ final class StateJson {
                 .put("departureCount", g.getDepartureCount())
                 .raw("targets", new Json.Obj().put("paid", 4).put("revenueCents", 4500).put("revenue", "$45.00")
                         .put("averageSatisfaction", 60).toString())
+                .raw("happyHour", new Json.Obj().put("available", g.isHappyHourAvailable())
+                        .put("remainingTurns", g.getHappyHourRemainingTurns()).toString())
                 .raw("queue", ids(g.getQueue()))
                 .raw("tables", tables(g))
                 .raw("customers", customers(session))
@@ -118,7 +121,8 @@ final class StateJson {
                     .put("id", o.getId())
                     .put("customerId", o.getCustomer().getId())
                     .put("item", o.getItem().getName())
-                        .put("status", o.getStatus().name())
+                    .raw("components", components(o.getItem()))
+                    .put("status", o.getStatus().name())
                     .put("unitsDone", o.getUnitsDone())
                     .put("prepUnits", o.getItem().getPrepUnits())
                     .put("priceCents", o.getLockedPriceCents())
@@ -129,6 +133,19 @@ final class StateJson {
                     .toString());
         }
         return Json.arr(out);
+    }
+
+    /** Base dishes in an item, for drawing (a combo is drawn as its two dishes). */
+    private static String components(MenuItem item) {
+        List<String> names = new ArrayList<>();
+        if (item instanceof ComboMeal combo) {
+            for (MenuItem part : combo.getComponents()) {
+                names.add(Json.str(part.getName()));
+            }
+        } else {
+            names.add(Json.str(item.getName()));
+        }
+        return Json.arr(names);
     }
 
     private static String nextArrival(GameSession session) {
@@ -165,8 +182,17 @@ final class StateJson {
         GameSession.Phase phase = session.phase();
         List<String> choices = new ArrayList<>();
         switch (phase) {
+            case HAPPY_HOUR -> {
+                choices.add(choice("happyHourYes", "Start Happy Hour", null,
+                        "20% off new orders and +15 for waiting guests, this turn and next.", List.of()));
+                choices.add(choice("happyHourNo", "Not now", null, "Save it for later (once per game).", List.of()));
+            }
+            case HOST -> {
+                choices.add(seatChoice(g, "hostSeat"));
+                choices.add(choice("hostWait", "Wait", null, WAIT_HINT, List.of()));
+            }
             case WAITER -> {
-                choices.add(seatChoice(g));
+                choices.add(seatChoice(g, "waiterSeat"));
                 choices.add(takeOrderChoice(g));
                 choices.add(serveChoice(g));
                 choices.add(choice("waiterWait", "Wait", null, WAIT_HINT, List.of()));
@@ -187,12 +213,12 @@ final class StateJson {
 
     private static final String WAIT_HINT = "Do nothing this turn (the task is used up).";
 
-    /** Waiter seats: first who (any queued customer), then which table (free tables enabled). */
-    private static String seatChoice(GameController g) {
+    /** Seat: first who (any queued customer), then which table (free tables enabled). */
+    private static String seatChoice(GameController g, String type) {
         String reason = g.getQueue().isEmpty() ? "Nobody is waiting in the queue."
                 : g.getFreeTables().isEmpty() ? "No table is free until someone pays or leaves." : null;
         if (reason != null) {
-            return choice("waiterSeat", "Seat a customer", reason, null, List.of());
+            return choice(type, "Seat a customer", reason, null, List.of());
         }
         List<String> who = new ArrayList<>();
         for (Customer c : g.getQueue()) {
@@ -207,7 +233,7 @@ final class StateJson {
         String hint = g.getQueue().size() == 1
                 ? describe(g.getQueue().get(0)) + " is waiting outside."
                 : g.getQueue().size() + " guests are waiting outside.";
-        return choice("waiterSeat", "Seat a customer", null, hint, List.of(
+        return choice(type, "Seat a customer", null, hint, List.of(
                 step("customer", "Who should I seat?", who),
                 step("table", "Which table should I seat them at?", where)));
     }

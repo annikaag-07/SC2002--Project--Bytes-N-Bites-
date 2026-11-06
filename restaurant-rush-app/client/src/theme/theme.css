@@ -83,12 +83,15 @@
   /* Staff uniforms */
   --chef-jacket: #f4f4f4;
   --chef-scarf: #e8364f;
+  --host-vest: #6b46c1;
+  --host-shirt: #f4f4f4;
   --waiter-vest: #1f2333;
   --waiter-shirt: #f4f4f4;
   --manager-suit: #2fae90;
   --manager-tie: #ff6ac1;
   --cashier-shirt: #43b65a;
   --tray: #c9cde0;
+  --menu-book: #c8283f;
 
   /* Penguin skin */
   --penguin-body: #252a44;
@@ -148,6 +151,11 @@
   --chair-frame: #2b2f52;
   --chair-seat: #3d4374;
   --chair-accent: #6ee7ff;
+  /* host pedestal */
+  --pedestal-body: #3a2266;
+  --pedestal-shade: #2a1850;
+  --pedestal-trim: #ff4fd8;
+  --pedestal-top: #6ee7ff;
   --prop-glow: drop-shadow(0 0 3px rgb(255 79 216 / 0.7));
   /* cashier booth */
   --booth-body: #18213f;
@@ -252,6 +260,10 @@
   --chair-frame: #7a4f2a;
   --chair-seat: #f3e3c3;
   --chair-accent: #a8743f;
+  --pedestal-body: #b07a45;
+  --pedestal-shade: #8a5a32;
+  --pedestal-trim: #6e4424;
+  --pedestal-top: #f3e3c3;
   --prop-glow: drop-shadow(0 2px 0 rgb(40 22 10 / 0.35));
   --booth-body: #8a5a36;
   --booth-shade: #6e4424;
@@ -354,6 +366,10 @@
   --chair-frame: #4a2e1e;
   --chair-seat: #c8283f;
   --chair-accent: #6b4426;
+  --pedestal-body: #2a1810;
+  --pedestal-shade: #1a0f0a;
+  --pedestal-trim: #b3202f;
+  --pedestal-top: #e6b422;
   --prop-glow: drop-shadow(0 2px 0 rgb(0 0 0 / 0.45));
   --booth-body: #3a2418;
   --booth-shade: #24150f;

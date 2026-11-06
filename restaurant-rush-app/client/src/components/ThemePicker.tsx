@@ -5,8 +5,8 @@
 import { useState } from "react";
 
 import { PixelSprite } from "@/components/pixel/Pixel";
-import { CUSTOMER_LOOKS, figureSprite, seatedSprite, type Skin } from "@/components/pixel/sprites";
-import { chairSprite, cornerDecor, lampSprite, signDecor, tableSprite } from "@/components/pixel/themeSprites";
+import { CUSTOMER_LOOKS, STAFF_LOOKS, figureSprite, seatedSprite, type Skin } from "@/components/pixel/sprites";
+import { chairSprite, cornerDecor, lampSprite, pedestalSprite, signDecor, tableSprite } from "@/components/pixel/themeSprites";
 import { sounds } from "@/sound/soundManager";
 import { store } from "@/store/gameStore";
 import { THEMES, type ThemeId } from "@/theme/themes";
@@ -23,6 +23,12 @@ export function ThemePreview({ id, skin }: { id: ThemeId; skin: Skin }) {
       <div className="tp-floor">
         <span className="tp-decor">
           <PixelSprite sprite={cornerDecor(id)} scale={2} />
+        </span>
+        <span className="tp-host">
+          <PixelSprite sprite={figureSprite(STAFF_LOOKS.Host, skin)} scale={2} />
+          <span className="tp-pedestal">
+            <PixelSprite sprite={pedestalSprite(id)} scale={2} />
+          </span>
         </span>
         <span className="tp-table">
           <span className="tp-lamp">

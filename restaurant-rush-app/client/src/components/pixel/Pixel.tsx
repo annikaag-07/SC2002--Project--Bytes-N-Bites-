@@ -51,7 +51,7 @@ export function PixelSprite({
   );
 }
 
-/** Food icons for an order. */
+/** Food icons for an order (a combo shows both of its dishes). */
 export function Food({ names, scale = 3 }: { names: readonly string[]; scale?: number }) {
   return (
     <span className="food">

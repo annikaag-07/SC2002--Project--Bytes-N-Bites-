@@ -12,4 +12,7 @@ export const TIPS: string[] = [
   "VIPs are patient (only -5 a turn) and get 10% off their bill.",
   "Critics hate waiting. Serve them within 2 turns of ordering and they leave a glowing review.",
   "Every game has at least one VIP and one Critic, but who arrives when changes from game to game.",
+  "The Host seats before the Waiter, so the Waiter can take that guest's order in the same turn.",
+  "Happy Hour works once per game: +15 for everyone still waiting, and 20% off orders taken.",
+  "Combos take longer to cook. Salad + Pasta needs 3 Chef turns.",
 ];

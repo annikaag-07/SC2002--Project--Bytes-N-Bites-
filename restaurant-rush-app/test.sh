@@ -1,5 +1,5 @@
 #!/bin/sh
-# Adapter self-tests: parity with the Java CLI's Stage 2 and Stage 1 logs, save/replay and the decision questions
+# Adapter self-tests: classic-mode parity with the Java CLI's Stage 3 logs, save/replay and the decision questions
 # (AdapterSelfTest), then the mode, the arrival schedule and payment timing (ModeSelfTest).
 set -e
 cd "$(dirname "$0")"

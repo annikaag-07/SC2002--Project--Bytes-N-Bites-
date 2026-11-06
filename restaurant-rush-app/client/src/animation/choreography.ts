@@ -5,7 +5,7 @@
  * The back end has already resolved everything; this module only decides how to *show* it. It never changes
  * game state, and the paths and timings do not depend on the theme, so the visuals cannot affect gameplay.
  *
- * Waypoints are named anchors in the restaurant view (data-anchor="..."), e.g. "waiter-home", "seat-T1",
+ * Waypoints are named anchors in the restaurant view (data-anchor="..."), e.g. "host-home", "seat-T1",
  * "counter", "booth". See World.tsx for where each one sits.
  */
 import type { Customer, GameAction, GameEvent, GameState } from "@/api/types";
@@ -16,7 +16,7 @@ export interface AnchorRef {
   dy?: number;
 }
 
-export type Role = "Waiter" | "Chef";
+export type Role = "Host" | "Waiter" | "Chef";
 
 export interface ActorSpec {
   id: string;
@@ -85,26 +85,44 @@ export function planDuration(plan: Plan): number {
 
 // ------------------------------------------------------------------ building blocks
 
-function seatPart(customer: Customer, tableId: string, menusBefore: number): Part {
+function seatPart(leader: "Host" | "Waiter", customer: Customer, tableId: string, menusBefore: number): Part {
   const c = `walk-${customer.id}`;
-  const w = "ghost-Waiter";
+  const l = `ghost-${leader}`;
+  const home = leader === "Host" ? "host-home" : "waiter-home";
+  const waiterSeats = leader === "Waiter";
   return {
     actors: [
       { id: c, kind: "customer", customer: { ...customer, state: "WAITING" }, start: { name: "queue-front" } },
-      { id: w, kind: "staff", role: "Waiter", start: { name: "waiter-home" }, menus: menusBefore },
+      { id: l, kind: "staff", role: leader, start: { name: home }, menus: waiterSeats ? menusBefore : undefined },
     ],
-    hidden: [`seat-${tableId}`, STAFF_KEY("Waiter"), MENU_KEY(tableId)],
+    hidden: [`seat-${tableId}`, STAFF_KEY(leader), ...(waiterSeats ? [MENU_KEY(tableId)] : [])],
     segments: [
-      // Customer steps in from the queue and meets the Waiter by the door.
-      { ms: 650, moves: [{ actor: c, to: { name: "door-meet" } }, { actor: w, to: { name: "door-meet", dx: 26 } }] },
-      // The Waiter walks to the table with the customer following.
-      { ms: 900, moves: [{ actor: w, to: { name: `stand-${tableId}` } }, { actor: c, to: { name: `seat-${tableId}` } }] },
+      // Customer steps in from the queue to meet whoever seats them.
+      { ms: 650, moves: [{ actor: c, to: { name: "host-meet" } }, ...(waiterSeats ? [{ actor: l, to: { name: "host-meet", dx: 26 } }] : [])] },
+      // Leader walks to the table with the customer following.
+      { ms: 900, moves: [{ actor: l, to: { name: `stand-${tableId}` } }, { actor: c, to: { name: `seat-${tableId}` } }] },
       // Customer sits down (the real seated figure takes over with its sit-down animation).
       { ms: 250, moves: [], vanish: [c], reveal: [`seat-${tableId}`] },
-      // The Waiter puts one of their menus on the table.
+      // A seating waiter puts one of their menus on the table.
+      ...(waiterSeats
+        ? [{ ms: 350, moves: [], cooking: [l], menus: { [l]: Math.max(0, menusBefore - 1) }, reveal: [MENU_KEY(tableId)] }]
+        : []),
+      // Leader walks back to their home spot.
+      { ms: 850, moves: [{ actor: l, to: { name: home } }], vanish: [l], reveal: [STAFF_KEY(leader)] },
+    ],
+  };
+}
+
+/** After the Host seats someone, the waiter brings a menu to the table and walks back. */
+function menuDropPart(tableId: string, menusBefore: number): Part {
+  const w = "ghost-Waiter";
+  return {
+    actors: [{ id: w, kind: "staff", role: "Waiter", start: { name: "waiter-home" }, menus: menusBefore }],
+    hidden: [STAFF_KEY("Waiter"), MENU_KEY(tableId)],
+    segments: [
+      { ms: 750, moves: [{ actor: w, to: { name: `stand-${tableId}` } }] },
       { ms: 350, moves: [], cooking: [w], menus: { [w]: Math.max(0, menusBefore - 1) }, reveal: [MENU_KEY(tableId)] },
-      // The Waiter walks back to their home spot.
-      { ms: 850, moves: [{ actor: w, to: { name: "waiter-home" } }], vanish: [w], reveal: [STAFF_KEY("Waiter")] },
+      { ms: 750, moves: [{ actor: w, to: { name: "waiter-home" } }], vanish: [w], reveal: [STAFF_KEY("Waiter")] },
     ],
   };
 }
@@ -281,9 +299,13 @@ export function planAnimation(id: number, before: GameState, after: GameState, a
   const menusBefore = Math.max(0, MENU_COUNT - menusOnTables(before));
 
   // 1. The staff action itself.
-  if (action.type === "waiterSeat" && action.customer) {
+  if ((action.type === "hostSeat" || action.type === "waiterSeat") && action.customer) {
     const c = find(after, action.customer);
-    if (c?.table) parts.push(seatPart(c, c.table, menusBefore));
+    if (c?.table) {
+      parts.push(seatPart(action.type === "hostSeat" ? "Host" : "Waiter", c, c.table, menusBefore));
+      // After the Host seats someone the waiter brings a menu (queued after the Host's walk, never overlapping).
+      if (action.type === "hostSeat" && menusBefore > 0) parts.push(menuDropPart(c.table, menusBefore));
+    }
   }
   if (action.type === "waiterTakeOrder" && action.customer) {
     const c = find(after, action.customer);
@@ -292,11 +314,11 @@ export function planAnimation(id: number, before: GameState, after: GameState, a
   if (action.type === "waiterServe" && action.order) {
     const order = after.orders.find((o) => o.id === action.order);
     const c = order && find(after, order.customerId);
-    if (order && c?.table) parts.push(servePart(c.table, [order.item], menusBefore));
+    if (order && c?.table) parts.push(servePart(c.table, order.components, menusBefore));
   }
   if (action.type === "chefCook" && action.order) {
     const order = after.orders.find((o) => o.id === action.order);
-    if (order) parts.push(cookPart(order.id, order.status === "READY", [order.item]));
+    if (order) parts.push(cookPart(order.id, order.status === "READY", order.components));
   }
 
   // 2. End-of-turn results reported by the back end (after the Chef), in the engine's step order: the Cashier

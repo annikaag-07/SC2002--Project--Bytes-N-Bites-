@@ -376,7 +376,13 @@ p {
 .stat.met strong {
   color: var(--teal);
 }
-
+.stat.happy {
+  border-color: var(--yellow);
+  animation: pulse 1.2s steps(2) infinite;
+}
+.stat.happy strong {
+  color: var(--yellow);
+}
 .hud-spacer {
   flex: 1;
 }
@@ -579,12 +585,10 @@ p {
   left: 0;
   top: 8%;
 }
-
-.door-meet-spot {
+.host-spot {
   position: absolute;
   left: 8%;
   top: 22%;
-  width: 44px;
 }
 .table-spot {
   position: absolute;
@@ -680,7 +684,10 @@ p {
   background: var(--panel);
   border: 2px solid var(--panel-border);
 }
-
+.host-spot .name-tag {
+  background: var(--pedestal-body);
+  border-color: var(--pedestal-trim);
+}
 .staff.is-active .pixel {
   filter: drop-shadow(2px 0 0 var(--teal)) drop-shadow(-2px 0 0 var(--teal)) drop-shadow(0 2px 0 var(--teal))
     drop-shadow(0 -2px 0 var(--teal)) drop-shadow(0 0 8px rgb(110 231 200 / 0.6));
@@ -1091,16 +1098,36 @@ p {
 }
 
 /* ------------------------------------------------------------------ themed props (same size in every theme) */
-/* Props sit above the walking layer (z-index 1), so walkers pass behind tables and the booth,
+/* Props sit above the walking layer (z-index 1), so walkers pass behind tables, the pedestal and the booth,
    and never cover a badge, tag or button. */
 .door,
+.host-spot,
 .table-spot,
 .waiter-spot,
 .booth-area,
 .corner-decor {
   z-index: 2;
 }
-
+.host-stand {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+/* the pedestal covers the host's legs: only the upper body shows behind it */
+.pedestal {
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  transform: translateX(-50%);
+  filter: var(--prop-glow);
+  z-index: 1;
+}
+.pedestal-item {
+  position: absolute;
+  bottom: calc(100% - 2px);
+  right: 1px;
+}
 .corner-decor {
   position: absolute;
   left: 1.5%;
@@ -1245,10 +1272,9 @@ p {
   left: 80%;
   top: 86%;
 }
-
-.mark-door-meet {
-  left: 62px;
-  top: 54px;
+.mark-host-meet {
+  left: calc(100% + 22px);
+  bottom: 0;
 }
 .mark-counter {
   left: 0;
@@ -1492,7 +1518,17 @@ p {
   left: 4px;
   bottom: 4px;
 }
-
+.tp-host {
+  position: absolute;
+  left: 28%;
+  bottom: 12px;
+}
+.tp-pedestal {
+  position: absolute;
+  left: 50%;
+  bottom: -2px;
+  transform: translateX(-50%);
+}
 .tp-table {
   position: absolute;
   right: 10%;
@@ -1715,10 +1751,9 @@ p {
   .table-spot.t2 {
     left: 72%;
   }
-  .door-meet-spot {
+  .host-spot {
     top: 46%;
   }
-  
   .dialog {
     grid-template-columns: 1fr;
   }

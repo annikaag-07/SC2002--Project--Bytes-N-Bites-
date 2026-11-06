@@ -6,12 +6,13 @@ import java.util.List;
 import java.util.Random;
 
 /**
- * Who arrives in each of the six arrival slots of a web game. A pure function of the seed: the same seed always
- * gives the same list, so a replayed save (Continue) gets the same customers.
+ * Who arrives in each of the six arrival slots of a web game. A pure function of (seed, mode): the same seed and
+ * mode always give the same list, so a replayed save (Continue) gets the same customers.
  *
  * <p>Each slot is drawn as Regular 50 / VIP 25 / Critic 25, then the draw is repaired so that every game has at least
  * one VIP, at least one Critic and at least two Regulars (the brief requires a VIP and a Critic in every reproducible
- * run; at most four of the six are not Regulars). The arrival turns never change.</p>
+ * run; at most four of the six are not Regulars). The {@code classic} mode uses the terminal game's fixed list
+ * instead. The arrival turns never change.</p>
  */
 final class ArrivalPlan {
 
@@ -45,9 +46,14 @@ final class ArrivalPlan {
      * The six arrivals of a game.
      *
      * @param seed game seed
+     * @param mode the mode
      * @return one kind per slot, in arrival order
      */
-    static List<Kind> kinds(long seed) {
+    static List<Kind> kinds(long seed, ModeFeatures mode) {
+        if (!mode.randomArrivals()) {
+            // The terminal game's fixed list (ArrivalSchedule.base).
+            return List.of(Kind.REGULAR, Kind.VIP, Kind.REGULAR, Kind.CRITIC, Kind.REGULAR, Kind.REGULAR);
+        }
         List<Kind> kinds = new ArrayList<>(Collections.nCopies(ARRIVAL_TURNS.length, Kind.REGULAR));
         Random rng = scheduleRandom(seed);
         int total = WEIGHT_REGULAR + WEIGHT_VIP + WEIGHT_CRITIC;
