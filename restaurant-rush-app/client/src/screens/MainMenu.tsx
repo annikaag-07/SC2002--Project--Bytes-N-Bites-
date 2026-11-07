@@ -9,12 +9,15 @@ import { useRotatingTip } from "@/content/useRotatingTip";
 import { sounds } from "@/sound/soundManager";
 import { store, type StoreState } from "@/store/gameStore";
 
-/** The game's mode (one card on "Start new game"). */
+/** The four modes, in order. Each builds on the one before (the assignment's stages, then the web extras). */
 const MODES: { mode: GameMode; name: string; text: string }[] = [
+  { mode: "stage1", name: "Stage 1", text: "Regular customers, the three-dish menu, Waiter, Chef and Cashier. The base game." },
+  { mode: "stage2", name: "Stage 2", text: "Stage 1 plus VIP and Critic customers." },
+  { mode: "stage3", name: "Stage 3", text: "Stage 2 plus the Host, combo meals and Happy Hour." },
   {
-    mode: "stage3",
-    name: "Stage 3",
-    text: "Regular, VIP and Critic customers, a Host at the door, combo meals and a once-per-game Happy Hour.",
+    mode: "custom",
+    name: "Custom mode",
+    text: "Stage 3 plus an Impatient guest on turn 10, Picky, Chatty and Grumpy regulars, and Happy Hour tips.",
   },
 ];
 

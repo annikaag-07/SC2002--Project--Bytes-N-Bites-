@@ -6,13 +6,17 @@
  * [data-anchor] waypoints below and hides the scene element each ghost stands in for (keys such as
  * "staff-Waiter", "seat-T1", "plate-T1", "tag-T1", "ready-O3"). The game state itself is already final; the
  * animation only replays it.
+ *
+ * What is drawn follows the mode's features from the server: no Host, pedestal or Host name tag in Stage 1 and
+ * Stage 2 (their space stays reserved and invisible, so the layout never moves and the "host-meet" anchor where
+ * the Waiter greets new guests stays in place).
  */
 import { useRef } from "react";
 
 import type { Customer, GameState, Order } from "@/api/types";
 import { useChoreography } from "@/animation/useChoreography";
 import { CustomerFigure, Food, MenuCard, PixelSprite, SatisfactionBadge, WaiterFigure } from "@/components/pixel/Pixel";
-import { COIN, STAFF_LOOKS, figureSprite, type Skin } from "@/components/pixel/sprites";
+import { COIN, SPARKLE, STAFF_LOOKS, figureSprite, type Skin } from "@/components/pixel/sprites";
 import { menusOnTables } from "@/animation/choreography";
 import {
   NOREN,
@@ -92,6 +96,7 @@ export function World({ game, ui, theme }: { game: GameState; ui: StoreState; th
   const tickets = game.orders.filter((o) => o.status === "PENDING" || o.status === "PREPARING");
   const ready = game.orders.filter((o) => o.status === "READY");
   const role = game.decision?.role;
+  const hasHost = game.features.host;
   // The Cashier charges in step 4 at the END of a turn, so a payment shows up in the turn summary.
   const summary = game.phase === "SUMMARY" || game.phase === "OVER";
   const paidNews = summary ? game.turnSummary.find((e) => e.text.startsWith("Cashier collects")) : undefined;
@@ -200,22 +205,29 @@ export function World({ game, ui, theme }: { game: GameState; ui: StoreState; th
             <PixelSprite sprite={doorSprite(theme)} scale={3} title="Door" />
           </div>
 
-          <div className="host-spot">
+          <div className={`host-spot ${hasHost ? "" : "no-host"}`} aria-hidden={hasHost ? undefined : true}>
             <div className={`staff host ${role === "Host" ? "is-active" : ""}`}>
               <span className="host-stand">
-                <span className="staff-figure" data-anchor="host-home" style={{ visibility: isHidden("staff-Host") ? "hidden" : undefined }}>
+                <span
+                  className="staff-figure"
+                  data-anchor="host-home"
+                  style={{ visibility: !hasHost || isHidden("staff-Host") ? "hidden" : undefined }}
+                >
                   <PixelSprite sprite={figureSprite(STAFF_LOOKS.Host, skin)} scale={3} title="Host" />
                 </span>
                 {/* the pedestal sits in front of the host, so only the upper body shows */}
-                <span className="pedestal" aria-hidden>
+                <span className="pedestal" aria-hidden style={{ visibility: hasHost ? undefined : "hidden" }}>
                   <span className="pedestal-item">
                     <PixelSprite sprite={pedestalAccessory(theme)} scale={2} />
                   </span>
                   <PixelSprite sprite={pedestalSprite(theme)} scale={3} />
                 </span>
+                {/* where the Host (or, without a Host, the Waiter) greets a guest at the door */}
                 <i className="anchor-mark mark-host-meet" data-anchor="host-meet" />
               </span>
-              <span className="name-tag">Host</span>
+              <span className="name-tag" style={{ visibility: hasHost ? undefined : "hidden" }}>
+                Host
+              </span>
             </div>
           </div>
 
@@ -311,7 +323,11 @@ export function World({ game, ui, theme }: { game: GameState; ui: StoreState; th
               <strong>Cashier</strong>
               <span>
                 {paidNews
-                  ? paidNews.text.replace(/^Cashier collects (\$[\d.]+) from (C\d+).*/, "Collected $1 from $2")
+                  ? paidNews.text.replace(/^Cashier collects (\$[\d.]+) from (C\d+).*/, "Collected $1 from $2") +
+                    game.tipList
+                      .filter((t) => t.turn === game.turn)
+                      .map((t) => ` + ${t.amount} tip`)
+                      .join("")
                   : !summary && game.cashierNext
                     ? `${game.cashierNext} pays at the end of this turn${waitingToPay.length > 0 ? `, then ${waitingToPay.join(", ")}` : ""}`
                     : readyToPay.length > 0
@@ -336,7 +352,7 @@ export function World({ game, ui, theme }: { game: GameState; ui: StoreState; th
             ) : actor.kind === "staff" ? (
               <PixelSprite sprite={figureSprite(STAFF_LOOKS[actor.role!], skin)} scale={3} />
             ) : (
-              // same figure as in the scene: emotion tint and anger marks included
+              // same figure as in the scene: aura outline, phone, emotion tint and anger marks included
               <CustomerFigure customer={actor.customer!} skin={skin} scale={3} />
             );
           return (
@@ -356,7 +372,9 @@ export function World({ game, ui, theme }: { game: GameState; ui: StoreState; th
       </div>
       <div className="float-layer" aria-hidden>
         {motion.floats.map((f) => (
-          <span key={f.key} className="float-text" style={{ left: f.x, top: f.y }}>
+          <span key={f.key} className={`float-text ${f.kind ? `float-${f.kind}` : ""}`} style={{ left: f.x, top: f.y }}>
+            {f.kind === "tip" && <PixelSprite sprite={SPARKLE} scale={2} className="sparkle" />}
+            {f.kind === "tip" && <PixelSprite sprite={COIN} scale={2} />}
             {f.text}
           </span>
         ))}

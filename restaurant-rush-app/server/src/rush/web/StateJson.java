@@ -32,6 +32,7 @@ final class StateJson {
                 .put("day", session.day())
                 .put("mode", session.mode().id())
                 .put("modeLabel", session.mode().label())
+                .raw("features", features(session.mode()))
                 .raw("menu", menu(g))
                 .put("turn", g.getCurrentTurn())
                 .put("totalTurns", g.getTotalTurns())
@@ -40,11 +41,18 @@ final class StateJson {
                 .put("revenue", Money.format(g.getRevenueCents()))
                 .put("averageSatisfaction", g.getAverageSatisfactionText())
                 .put("paidCount", g.getPaidCount())
+                // Happy Hour tips: shown separately; they do not change revenue (the $45 victory target).
+                .put("tipsCents", session.tipsCents())
+                .put("tips", Money.format(session.tipsCents()))
+                .put("totalEarnedCents", g.getRevenueCents() + session.tipsCents())
+                .put("totalEarned", Money.format(g.getRevenueCents() + session.tipsCents()))
+                .put("tipsCountTowardsTarget", CustomerSubtypes.TIPS_COUNT_TOWARDS_REVENUE_TARGET)
+                .raw("tipList", tipList(session))
                 .put("servedCount", g.getServedCount())
                 .put("departureCount", g.getDepartureCount())
                 .raw("targets", new Json.Obj().put("paid", 4).put("revenueCents", 4500).put("revenue", "$45.00")
                         .put("averageSatisfaction", 60).toString())
-                .raw("happyHour", new Json.Obj().put("available", g.isHappyHourAvailable())
+                .raw("happyHour", new Json.Obj().put("available", session.mode().happyHour() && g.isHappyHourAvailable())
                         .put("remainingTurns", g.getHappyHourRemainingTurns()).toString())
                 .raw("queue", ids(g.getQueue()))
                 .raw("tables", tables(g))
@@ -52,12 +60,25 @@ final class StateJson {
                 .raw("orders", orders(g))
                 .raw("nextArrival", nextArrival(session))
                 .raw("cashierNext", g.getNextPayingCustomer().map(c -> Json.str(c.getId())).orElse("null"))
-                .raw("turnSummary", events(session.lastTurnEvents()))
+                .raw("turnSummary", events(withTips(session, session.lastTurnEvents())))
                 .raw("turnStartEvents", events(session.turnStartEvents()))
-                .raw("log", events(g.getEventLog()))
+                .raw("log", events(logWithTips(session)))
                 .raw("decision", decision(session))
                 .raw("result", session.isOver() || g.isGameOver() ? result(g.getResult()) : "null");
         return state.toString();
+    }
+
+    /** Which features the mode has, so the client draws only those (Host, Happy Hour chip, Tips chip...). */
+    private static String features(ModeFeatures mode) {
+        return new Json.Obj()
+                .put("vipAndCritic", mode.vipAndCritic())
+                .put("host", mode.host())
+                .put("combos", mode.combos())
+                .put("happyHour", mode.happyHour())
+                .put("tips", mode.tips())
+                .put("subTypes", mode.subTypes())
+                .put("impatient", mode.impatient())
+                .toString();
     }
 
     private static String menu(GameController g) {
@@ -65,6 +86,43 @@ final class StateJson {
         for (MenuItem item : g.getMenu().getOfferings()) {
             out.add(new Json.Obj().put("name", item.getName()).put("priceCents", item.getPriceCents())
                     .put("price", Money.format(item.getPriceCents())).put("prepUnits", item.getPrepUnits()).toString());
+        }
+        return Json.arr(out);
+    }
+
+    /** Adds this turn's tip events after the end-of-turn events (tips are left when the Cashier charges). */
+    private static List<GameEvent> withTips(GameSession session, List<GameEvent> events) {
+        int turn = session.game().getCurrentTurn();
+        List<GameEvent> out = new ArrayList<>(events);
+        for (GameSession.Tip tip : session.tips()) {
+            if (tip.turn() == turn && !events.isEmpty()) {
+                out.add(new GameEvent(turn, tip.text()));
+            }
+        }
+        return out;
+    }
+
+    /** The full log with each tip placed at the end of its turn. */
+    private static List<GameEvent> logWithTips(GameSession session) {
+        List<GameEvent> out = new ArrayList<>(session.game().getEventLog());
+        for (GameSession.Tip tip : session.tips()) {
+            int at = out.size();
+            for (int i = out.size() - 1; i >= 0; i--) {
+                if (out.get(i).getTurn() <= tip.turn()) {
+                    at = i + 1;
+                    break;
+                }
+            }
+            out.add(at, new GameEvent(tip.turn(), tip.text()));
+        }
+        return out;
+    }
+
+    private static String tipList(GameSession session) {
+        List<String> out = new ArrayList<>();
+        for (GameSession.Tip tip : session.tips()) {
+            out.add(new Json.Obj().put("turn", tip.turn()).put("customerId", tip.customerId()).put("cents", tip.cents())
+                    .put("amount", Money.format(tip.cents())).toString());
         }
         return Json.arr(out);
     }
@@ -100,9 +158,11 @@ final class StateJson {
         GameController g = session.game();
         List<String> out = new ArrayList<>();
         for (Customer c : g.getCustomers()) {
+            CustomerSubtypes.SubType subType = session.subTypeOf(c.getId());
             out.add(new Json.Obj()
                     .put("id", c.getId())
                     .put("type", c.typeLabel())
+                    .raw("subType", subType == null ? "null" : Json.str(subType.id()))
                     .put("satisfaction", c.getSatisfaction())
                     .put("recordedSatisfaction", c.getRecordedSatisfaction())
                     .put("state", c.getState().name())

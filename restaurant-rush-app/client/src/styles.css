@@ -714,7 +714,14 @@ p {
   animation: shake 0.45s steps(2) infinite;
   z-index: 3;
 }
-
+.tap {
+  position: absolute;
+  bottom: 0;
+  right: -30px;
+  font-size: 12px;
+  color: var(--shirt-impatient);
+  animation: blink 0.6s steps(1) infinite;
+}
 .tag {
   display: inline-flex;
   align-items: center;
@@ -778,7 +785,9 @@ p {
   background: var(--critic-beret);
   color: #fff;
 }
-
+.type-Impatient {
+  background: var(--shirt-impatient);
+}
 .food {
   display: inline-flex;
   gap: 2px;
@@ -1390,8 +1399,56 @@ p {
 }
 
 /* ------------------------------------------------------------------ customer sub-types (same colours in every theme) */
-
+.aura-picky {
+  --aura: #3ce05a;
+}
+.aura-chatty {
+  --aura: #3fa9ff;
+}
+.aura-grumpy {
+  --aura: #ff9a2e;
+}
 /* a crisp pixel outline around the sprite itself (not a glow), under the tint, anger marks and tags */
+.aura > svg.pixel {
+  filter: drop-shadow(2px 0 0 var(--aura)) drop-shadow(-2px 0 0 var(--aura)) drop-shadow(0 2px 0 var(--aura))
+    drop-shadow(0 -2px 0 var(--aura));
+}
+.phone {
+  position: absolute;
+  z-index: 2;
+}
+.typing {
+  position: absolute;
+  top: -4px;
+  left: -22px;
+  display: flex;
+  gap: 2px;
+  padding: 3px 4px;
+  background: var(--tag-bg);
+  border: 1px solid var(--ink-dim);
+  z-index: 3;
+}
+.typing i {
+  width: 3px;
+  height: 3px;
+  background: var(--tag-ink);
+  animation: typing 0.9s steps(1) infinite;
+}
+.typing i:nth-child(2) {
+  animation-delay: 0.3s;
+}
+.typing i:nth-child(3) {
+  animation-delay: 0.6s;
+}
+@keyframes typing {
+  0%,
+  66% {
+    opacity: 1;
+  }
+  33% {
+    opacity: 0.2;
+  }
+}
 
 /* ------------------------------------------------------------------ waiter menus */
 .waiter-figure {
@@ -1434,6 +1491,58 @@ p {
 .menu-lying {
   font-size: 10px;
   transform: skewX(-12deg);
+}
+.float-tip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--tip-ink);
+  font-size: 10px;
+}
+.float-ugh {
+  color: var(--danger);
+}
+.sparkle {
+  animation: blink 0.4s steps(1) infinite;
+}
+.aura-legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+}
+.legend-title {
+  font-family: var(--font-display);
+  font-size: 8px;
+  color: var(--teal);
+}
+.legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.legend-swatch {
+  width: 14px;
+  height: 14px;
+  border: 3px solid var(--aura, var(--ink-dim));
+  background: var(--panel-2);
+}
+.legend-picky {
+  --aura: #3ce05a;
+}
+.legend-chatty {
+  --aura: #3fa9ff;
+}
+.legend-grumpy {
+  --aura: #ff9a2e;
+}
+.legend-none {
+  border-style: dashed;
+}
+.hh-tip-note {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
 /* ------------------------------------------------------------------ theme picker */

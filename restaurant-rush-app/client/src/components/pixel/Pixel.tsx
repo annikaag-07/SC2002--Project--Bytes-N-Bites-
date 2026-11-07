@@ -3,7 +3,7 @@ import type { CSSProperties } from "react";
 
 import type { Customer } from "@/api/types";
 
-import { ANGER, CUSTOMER_LOOKS, FOOD, STAFF_LOOKS, figureSprite, moodFor, seatedSprite, type Skin, type Sprite } from "./sprites";
+import { ANGER, CUSTOMER_LOOKS, FOOD, PHONE, STAFF_LOOKS, figureSprite, moodFor, seatedSprite, type Skin, type Sprite } from "./sprites";
 
 /** Draws a sprite as crisp SVG rectangles, one per run of same-coloured pixels. */
 export function PixelSprite({
@@ -91,8 +91,10 @@ export function CustomerFigure({
 }) {
   const mood = moodFor(customer.satisfaction);
   const standing = figureSprite(CUSTOMER_LOOKS[customer.type], skin, mood, customer.id);
+  // Sub-type aura: a crisp coloured outline around the sprite (same colours in every theme).
+  const aura = customer.subType && customer.subType !== "normal" ? `aura aura-${customer.subType}` : "";
   return (
-    <span className={`figure customer-figure mood-${mood}`} data-type={customer.type}>
+    <span className={`figure customer-figure mood-${mood} ${aura}`} data-type={customer.type} data-subtype={customer.subType ?? undefined}>
       {mood === "angry" && (
         <span className="anger" aria-hidden>
           <PixelSprite sprite={ANGER} scale={3} />
@@ -106,6 +108,19 @@ export function CustomerFigure({
         key={customer.state}
         className="bounce-in"
       />
+      {customer.subType === "chatty" && (
+        <>
+          <span className="phone" style={{ bottom: (seated ? 6 : 7) * scale, right: -scale }} aria-hidden>
+            <PixelSprite sprite={PHONE} scale={scale} />
+          </span>
+          {seated && <span className="typing" aria-hidden><i /><i /><i /></span>}
+        </>
+      )}
+      {customer.type === "Impatient" && customer.state !== "EATING" && (
+        <span className="tap" aria-hidden>
+          tap tap
+        </span>
+      )}
     </span>
   );
 }

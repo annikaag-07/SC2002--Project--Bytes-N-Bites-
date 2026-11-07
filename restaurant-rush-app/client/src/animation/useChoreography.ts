@@ -26,6 +26,7 @@ export interface FloatView {
   x: number;
   y: number;
   text: string;
+  kind?: "tip" | "ugh";
 }
 
 export interface ChoreographyView {
@@ -130,7 +131,7 @@ export function useChoreography(
         if (g) g.menus = v;
       }
       ghosts.forEach((g) => (g.cooking = s.cooking?.includes(g.id) ?? false));
-      floats = (s.float ?? []).map((f, n) => ({ key: `${plan.id}-${i}-${n}`, ...point(f.at), text: f.text }));
+      floats = (s.float ?? []).map((f, n) => ({ key: `${plan.id}-${i}-${n}`, ...point(f.at), text: f.text, kind: f.kind }));
     };
 
     const publish = () =>

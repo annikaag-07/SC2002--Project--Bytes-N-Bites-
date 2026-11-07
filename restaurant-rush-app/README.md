@@ -20,7 +20,7 @@ Open **http://localhost:8090**. For development with hot reload (API on 8090, Vi
 ./dev.sh
 ```
 
-Self-tests: `AdapterSelfTest` replays the CLI's Stage 3 scripts through the web adapter in `classic` mode and compares every event line with the CLI logs, and checks save/replay and the decision questions. `ModeSelfTest` checks the mode, the random arrival schedule over 5,000 seeds, the payment timing (including the brief's section 3.3 example row by row) and plays 200 seeds with a bot:
+Self-tests: `AdapterSelfTest` replays the CLI's Stage 3 scripts through the web adapter in `classic` mode and compares every event line with the CLI logs, and checks save/replay and the Custom-mode extras. `ModeSelfTest` checks the four modes' features, the random arrival schedule over 5,000 seeds per mode, the payment timing (including the brief's section 3.3 example row by row), replays the CLI's Stage 1 and Stage 2 scripts through `stage1` / `stage2` mode, and plays 200 seeds per mode with a bot:
 
 ```bash
 ./test.sh
@@ -39,21 +39,34 @@ browser (React)                              Java (JDK only)
                                              GameController, entities  (UNCHANGED back end)
 ```
 
-- **(a) Adapter/API**: `client/src/api/` (types and fetch calls) and `server/src/rush/web/`. `GameSession` plays the same role as the CLI's `ConsoleUI`. It decides whose turn it is (Happy Hour → Host → Waiter → Chef, then the end-of-turn summary) and forwards each choice to `GameController`.
+- **(a) Adapter/API**: `client/src/api/` (types and fetch calls) and `server/src/rush/web/`. `GameSession` plays the same role as the CLI's `ConsoleUI`. It decides whose turn it is (Happy Hour → Host → Waiter → Chef, with Happy Hour and the Host only in modes that have them, then the end-of-turn summary) and forwards each choice to `GameController`.
 - **(b) Store**: `client/src/store/gameStore.ts` holds the latest server snapshot plus UI-only state (screen, skin, mute), runs the API calls and fires sound hooks.
 - **(c) UI**: `client/src/screens/` and `client/src/components/`. Components only render state and send the chosen action.
 
-### Mode
+### Modes
 
-New game offers one mode, **Stage 3** (`mode=stage3`). `server/src/rush/web/ModeFeatures.java` also has `classic` (API only): the same rules with the terminal game's fixed arrivals (Regular, VIP, Regular, Critic, Regular, Regular), used by the parity test against the CLI logs and never shown in the UI. Any other mode is an HTTP 400 error, and a save that names another mode is discarded and treated as "no save".
+The four modes are cumulative, like the assignment's stages. `server/src/rush/web/ModeFeatures.java` is the one place that says what each mode has; the state JSON passes the same flags (`features`) to the client, which draws only what the mode has (Host and pedestal, Happy Hour chip, Tips chip).
 
-### Arrivals
+| Mode (`mode=`) | VIP + Critic | Host | Combos | Happy Hour | Tips | Picky / Chatty / Grumpy | Impatient (turn 10) |
+|---|---|---|---|---|---|---|---|
+| Stage 1 (`stage1`) | | | | | | | |
+| Stage 2 (`stage2`) | yes | | | | | | |
+| Stage 3 (`stage3`) | yes | yes | yes | yes | | | |
+| Custom (`custom`) | yes | yes | yes | yes | yes | yes | yes |
+| `classic` (API only) | fixed list | yes | yes | yes | | | |
 
-Arrival turns never change: 1, 4, 7, 10, 13 and 16. `server/src/rush/web/ArrivalPlan.java` picks each slot as Regular 50 / VIP 25 / Critic 25 (named constants), then repairs the result so every game has at least 1 VIP, at least 1 Critic and at least 2 Regulars. A VIP or Critic can land on any slot, including turns 1 and 16, and can appear more than once. The schedule is a pure function of (seed, mode) with its own seeded generator, so Continue rebuilds the same customers and the customers' food choices are unaffected.
+- Stage 1 and 2 have no Host and no Happy Hour: those phases are skipped, and the server rejects `hostSeat`, `hostWait`, `happyHourYes` and `happyHourNo` with a reason. The Waiter seats guests. Their menu is Salad, Burger and Pasta (the first three items of the back end's standard menu).
+- In Stage 1 to 3 every Regular is a plain `RegularCustomer`: no sub-types and no tips.
+- `classic` is Stage 3 with the terminal game's fixed arrivals (Regular, VIP, Regular, Critic, Regular, Regular). It is used by the parity test against the CLI logs and is not shown in the UI.
+- An unknown mode (including the old `base` and `rush`) is an HTTP 400 error. A saved game from an older version is discarded and treated as "no save". Old high-score entries still show, labelled "Base" or "Rush".
+
+### Arrivals (Stage 2, Stage 3, Custom)
+
+Arrival turns never change: 1, 4, 7, 10, 13 and 16. `server/src/rush/web/ArrivalPlan.java` picks each slot as Regular 50 / VIP 25 / Critic 25 (named constants), then repairs the result so every game has at least 1 VIP, at least 1 Critic and at least 2 Regulars. A VIP or Critic can land on any slot, including turns 1 and 16, and can appear more than once. In Custom mode, slot 4 (turn 10, customer C4) is always the Impatient guest. Stage 1 is six Regulars. The schedule is a pure function of (seed, mode) with its own seeded generator, so Continue rebuilds the same customers and the customers' food choices are unaffected.
 
 ### Eating and payment
 
-The game uses the back end's default timing, the same as the terminal game and the brief (section 3.2, step 4): a customer served on turn s finishes eating at the end of turn s+1 (READY_TO_PAY), and the Cashier charges them in step 4 at the **end** of turn s+2 at the earliest, one customer per turn, oldest first. The table stays occupied during turn s+2's decisions and can be reused from turn s+3. On screen the diner stays seated with a "Ready to pay" tag; when the back end reports "Cashier collects ... table T# freed" at the end of the turn, they stand up, walk to the cashier booth, pay (a floating +$X) and walk out. Paid and Revenue in the HUD change at that moment. Nothing on the client counts turns: it only reacts to the back end's events and state.
+All modes use the back end's default timing, the same as the terminal game and the brief (section 3.2, step 4): a customer served on turn s finishes eating at the end of turn s+1 (READY_TO_PAY), and the Cashier charges them in step 4 at the **end** of turn s+2 at the earliest, one customer per turn, oldest first. The table stays occupied during turn s+2's decisions and can be reused from turn s+3. On screen the diner stays seated with a "Ready to pay" tag; when the back end reports "Cashier collects ... table T# freed" at the end of the turn, they stand up, walk to the cashier booth, pay (a floating +$X, plus the tip in Custom mode) and walk out. Paid and Revenue in the HUD change at that moment. Nothing on the client counts turns: it only reacts to the back end's events and state.
 
 All rules stay in the Java back end. The list of options for each role (and the reason a disabled option is disabled) is built on the server from the back end's own queries: free tables, seated customers, servable and preparable orders.
 
@@ -71,7 +84,7 @@ The table questions list both tables. A table where the job makes no sense is sh
 | Method | Path | Returns |
 |---|---|---|
 | GET | `/api/status` | `{ hasSave, hasGame }` |
-| POST | `/api/new?mode=stage3\|classic` | game state (unknown or missing mode: 400) |
+| POST | `/api/new?mode=stage1\|stage2\|stage3\|custom\|classic` | game state (unknown or missing mode: 400) |
 | POST | `/api/continue` | game state (replays the save) |
 | GET | `/api/state` | game state |
 | POST | `/api/action?type=&customer=&table=&order=` | `{ result, events, state }` |
@@ -96,16 +109,19 @@ Action types: `happyHourYes`, `happyHourNo`, `hostSeat`, `hostWait`, `waiterSeat
 - **Keyboard**: A-D pick an option, 1-9 answer a "which table?" question, Esc goes back.
 - **Restaurant themes**: Neon Nights (default), Cozy Café and Tokyo Diner, chosen from **Restaurant themes** on the main menu (with live preview). The colours of each theme are in `theme.css` under `[data-theme="..."]`. Prop patterns (tables, chairs, lamps, door, pedestal, cashier booth, decorations) are in `client/src/components/pixel/themeSprites.ts`. Every prop has the same size in every theme, so positions and movement are identical and a theme can never affect gameplay.
 - **Character movement**: `client/src/animation/choreography.ts` turns each back-end result (state before/after, the action, and its events) into short walking segments between fixed waypoints (`data-anchor` in `World.tsx`). `useChoreography.ts` plays them. The back end has already resolved the action, so the movement only replays it. Input is locked until it finishes, with a safety timeout so the game can never get stuck. The **Moves** button switches between 1x, 2x and off.
+- **Regular sub-types** (Custom mode only, `server/src/rush/web/CustomerSubtypes.java`): once per game, the Regular customers are rolled as Normal, **Picky** (green outline, sends the food back once and it returns to the counter), **Chatty** (blue outline and a phone, eats one extra turn) or **Grumpy** (orange outline, starts at 80-89, Happy Hour recovery doubled). The odds (0/1/2/3/4 specialised: 10/60/20/7/3%) and all numbers are constants in that file.
+- **Happy Hour tips** (Custom mode only): a customer whose bill got the Happy Hour discount and whose satisfaction at payment is above 80 tips 0-20% of the discounted bill, in whole cents. A tip is left when that customer pays (end of the turn) and is shown in the HUD, at the booth, the log, the turn summary and the result screen. They do **not** count towards the $45 revenue target (`TIPS_COUNT_TOWARDS_REVENUE_TARGET = false`).
 - **Waiter menus**: the waiter carries two "MENUS" cards. One is placed on a table when a guest is seated and picked up when the order is taken. This is shown from the state only.
 - **Paying flow (visual)**: see "Eating and payment" above. Revenue, satisfaction and table availability come only from the back end.
-- **Menu tips** (the rotating hints): `client/src/content/tips.ts`.
+- **Tips**: `client/src/content/tips.ts`.
 
 ## Decisions to flag
 
-0. **Mode.** New game offers **Stage 3**; picking it starts the game. `mode=classic` (API only) reproduces the CLI exactly and is used by `./test.sh`.
-1. **Host and Chef options** come from the back end: Host = seat / wait, Chef = cook one unit / wait.
-2. **Happy Hour** has no staff owner in the back end, so it is asked by a **Manager** character at the start of a turn, as in the CLI.
-3. **End of turn**: after the Chef chooses, the server closes the turn: payment, eating, waiting penalties and departures. The UI shows a summary, and **Start turn N ▶** begins the next turn.
-4. **Payment timing.** The brief's timing (see "Eating and payment" above).
+0. **Modes.** New game offers **Stage 1**, **Stage 2**, **Stage 3** and **Custom mode** (see "Modes" above); picking one starts the game. `mode=classic` (API only) reproduces the CLI exactly and is used by `./test.sh`.
+1. **Impatient customer** (Custom mode only). Added as `server/src/rush/web/ImpatientCustomer.java` without modifying the back end. It loses 10 per waiting turn and walks out once a turn would leave it at 30 or below. This uses the existing `satisfactionLossPerTurn()` hook, so the unchanged leave-at-0 rule does the rest; its satisfaction shows 0 when it storms out. It always arrives on turn 10 (customer C4).
+2. **Host and Chef options** come from the back end: Host = seat / wait, Chef = cook one unit / wait.
+3. **Happy Hour** (Stage 3 and Custom) has no staff owner in the back end, so it is asked by a **Manager** character at the start of a turn, as in the CLI.
+4. **End of turn**: after the Chef chooses, the server closes the turn: payment, eating, waiting penalties and departures. The UI shows a summary, and **Start turn N ▶** begins the next turn.
+7. **Payment timing.** Every mode uses the brief's timing (see "Eating and payment" above). The back end's opt-in `GameConfig.withChargeAtTurnStart` (start-of-turn payment, used by an earlier version of this web edition) is still in the back end but no mode uses it.
 5. **Arrivals**: a guest arrives on turns 1, 4, 7, 10, 13 and 16 (every 3rd turn). Who arrives comes from `ArrivalPlan` on the server (see "Arrivals" above); the UI does not schedule anything.
 6. Each new game uses a random seed internally; players see the Day number and stars instead.

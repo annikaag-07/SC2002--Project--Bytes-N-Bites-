@@ -12,6 +12,7 @@ public final class GameConfig {
     private final int minPaidCustomers;
     private final long minRevenueCents;
     private final int minAverageSatisfaction;
+    private final boolean chargeAtTurnStart;
 
     /**
      * Creates a configuration.
@@ -26,6 +27,11 @@ public final class GameConfig {
      */
     public GameConfig(int totalTurns, int tableCount, long seed, Menu menu,
                       int minPaidCustomers, long minRevenueCents, int minAverageSatisfaction) {
+        this(totalTurns, tableCount, seed, menu, minPaidCustomers, minRevenueCents, minAverageSatisfaction, false);
+    }
+
+    private GameConfig(int totalTurns, int tableCount, long seed, Menu menu, int minPaidCustomers,
+                       long minRevenueCents, int minAverageSatisfaction, boolean chargeAtTurnStart) {
         if (totalTurns < 1 || tableCount < 1 || menu == null) {
             throw new IllegalArgumentException("invalid configuration");
         }
@@ -36,6 +42,7 @@ public final class GameConfig {
         this.minPaidCustomers = minPaidCustomers;
         this.minRevenueCents = minRevenueCents;
         this.minAverageSatisfaction = minAverageSatisfaction;
+        this.chargeAtTurnStart = chargeAtTurnStart;
     }
 
     /**
@@ -57,7 +64,27 @@ public final class GameConfig {
      */
     public GameConfig withMenu(Menu otherMenu) {
         return new GameConfig(totalTurns, tableCount, seed, otherMenu,
-                minPaidCustomers, minRevenueCents, minAverageSatisfaction);
+                minPaidCustomers, minRevenueCents, minAverageSatisfaction, chargeAtTurnStart);
+    }
+
+    /**
+     * Returns a copy of this configuration with the Cashier's timing chosen. By default (false) the Cashier
+     * charges at the end of a turn, after the staff act. When true, the Cashier charges at the start of the
+     * turn instead: a customer who became READY_TO_PAY on turn t pays as soon as turn t is over, before any
+     * staff act on turn t+1, so their table is free for that turn. Used by the web edition; the CLI keeps the
+     * default.
+     *
+     * @param atTurnStart true to charge at the start of each turn
+     * @return the new configuration
+     */
+    public GameConfig withChargeAtTurnStart(boolean atTurnStart) {
+        return new GameConfig(totalTurns, tableCount, seed, menu,
+                minPaidCustomers, minRevenueCents, minAverageSatisfaction, atTurnStart);
+    }
+
+    /** @return true if the Cashier charges at the start of each turn rather than at the end */
+    public boolean isChargeAtTurnStart() {
+        return chargeAtTurnStart;
     }
 
     /** @return number of turns */

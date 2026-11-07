@@ -57,10 +57,11 @@ public final class GameController {
     // ---------------------------------------------------------------- turn steps
 
     /**
-     * Starts the next turn: resets every staff member's task, runs step 1 (arrivals) and, on the second turn
-     * of an active Happy Hour, applies its start-of-turn recovery.
+     * Starts the next turn: resets every staff member's task, runs the Cashier first if the configuration
+     * charges at the start of a turn, then step 1 (arrivals) and, on the second turn of an active Happy Hour,
+     * its start-of-turn recovery.
      *
-     * @return the arrival and recovery events
+     * @return the payment, arrival and recovery events
      */
     public List<GameEvent> beginTurn() {
         if (turnInProgress || isGameOver()) {
@@ -73,6 +74,10 @@ public final class GameController {
         chef.startTurn();
         cashier.startTurn();
         List<GameEvent> events = new ArrayList<>();
+        if (config.isChargeAtTurnStart()) {
+            // Customers who became READY_TO_PAY last turn pay straight away, freeing their table for this turn.
+            events.add(event(cashier.collectPayment(restaurant, currentTurn).getMessage()));
+        }
         for (Customer customer : schedule.arrivalsOn(currentTurn)) {
             restaurant.admitArrival(customer);
             events.add(event(customer.getId() + " (" + customer.typeLabel()
@@ -213,9 +218,12 @@ public final class GameController {
             throw new IllegalStateException("the Waiter and Chef must act (or wait) before the turn can end");
         }
         List<GameEvent> events = new ArrayList<>();
-        // Step 4a: the Cashier charges at most one customer who became READY_TO_PAY on an earlier turn.
-        ActionResult payment = cashier.collectPayment(restaurant, currentTurn);
-        events.add(event(payment.getMessage()));
+        // Step 4a: the Cashier charges at most one customer who became READY_TO_PAY on an earlier turn
+        // (unless the configuration charges at the start of the turn instead).
+        if (!config.isChargeAtTurnStart()) {
+            ActionResult payment = cashier.collectPayment(restaurant, currentTurn);
+            events.add(event(payment.getMessage()));
+        }
         // Step 4b: customers served on an earlier turn finish eating.
         for (Customer customer : restaurant.getCustomers()) {
             if (customer.finishEatingIfDone(currentTurn)) {

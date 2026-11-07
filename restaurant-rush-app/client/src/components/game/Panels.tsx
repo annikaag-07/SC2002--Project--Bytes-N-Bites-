@@ -36,8 +36,8 @@ export function TurnSummary({ game, skin, busy }: { game: GameState; skin: Skin;
         <p className="ask">End of turn {game.turn}</p>
         <EventList events={game.turnSummary} />
         <p className="situation">
-          Served {game.servedCount} · Left unhappy {game.departureCount} · Paid {game.paidCount} · Revenue {game.revenue} · Avg{" "}
-          {game.averageSatisfaction} · Turns used {game.turn}/{game.totalTurns}
+          Served {game.servedCount} · Left unhappy {game.departureCount} · Paid {game.paidCount} · Revenue {game.revenue}
+          {game.features.tips ? ` · Tips ${game.tips}` : ""} · Avg {game.averageSatisfaction} · Turns used {game.turn}/{game.totalTurns}
         </p>
         <button className="btn btn-primary next-btn" disabled={busy} onClick={() => void store.nextTurn()} autoFocus>
           {last ? "See the result" : `Start turn ${game.turn + 1}`}
@@ -78,6 +78,8 @@ export function GameOver({ game }: { game: GameState }) {
     { label: "Revenue", value: r.revenue, goal: game.targets.revenue, met: r.revenueMet },
     { label: "Average satisfaction", value: r.averageSatisfaction, goal: `${game.targets.averageSatisfaction}`, met: r.satisfactionMet },
   ];
+  // "classic" is API-only; Play again offers its closest playable mode.
+  const mode = game.mode === "classic" ? "stage3" : game.mode;
   return (
     <div className="overlay">
       <div className="modal result pop-in" role="dialog" aria-label="Game over">
@@ -102,6 +104,12 @@ export function GameOver({ game }: { game: GameState }) {
             ))}
           </tbody>
         </table>
+        {game.features.tips && (
+          <p className="dim">
+            Tips {game.tips} · Total earned {game.totalEarned}
+            {game.tipsCountTowardsTarget ? "" : " (tips are a bonus: they do not count towards the revenue target)"}
+          </p>
+        )}
         <p className="result-line">RESULT: {r.victory ? "VICTORY" : "DEFEAT"}</p>
         <div className="modal-actions">
           <button className="btn" onClick={() => store.goTo("menu")}>
@@ -110,7 +118,7 @@ export function GameOver({ game }: { game: GameState }) {
           <button className="btn" onClick={() => store.goTo("scores")}>
             High scores
           </button>
-          <button className="btn btn-primary" onClick={() => void store.newGame("stage3")}>
+          <button className="btn btn-primary" onClick={() => void store.newGame(mode)}>
             Play again
           </button>
         </div>

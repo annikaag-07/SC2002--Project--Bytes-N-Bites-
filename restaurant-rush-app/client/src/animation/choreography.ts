@@ -47,7 +47,7 @@ export interface Segment {
   carry?: Record<string, string[] | null>;
   bubble?: Record<string, string | null>;
   cooking?: string[];
-  float?: { at: AnchorRef; text: string }[];
+  float?: { at: AnchorRef; text: string; kind?: "tip" | "ugh" }[];
   /** Waiter's menus in hand from this segment on. */
   menus?: Record<string, number>;
   /** Applied when the segment ends. */
@@ -150,6 +150,28 @@ function takeOrderPart(tableId: string, menusBefore: number): Part {
   };
 }
 
+/** A picky eater sends the dish straight back: the waiter carries it back to the counter. */
+function sendBackPart(tableId: string, orderId: string, dish: string[], menus: number): Part {
+  const w = "ghost-Waiter";
+  const d = "dish-on-counter";
+  return {
+    actors: [
+      { id: w, kind: "staff", role: "Waiter", start: { name: "waiter-home" }, menus },
+      { id: d, kind: "dish", dish, start: { name: "counter" } },
+    ],
+    hidden: [STAFF_KEY("Waiter"), `ready-${orderId}`],
+    segments: [
+      { ms: 800, moves: [{ actor: w, to: { name: "counter" } }] },
+      { ms: 200, moves: [], vanish: [d], carry: { [w]: dish } },
+      { ms: 900, moves: [{ actor: w, to: { name: `stand-${tableId}` } }] },
+      { ms: 600, moves: [], bubble: { [w]: "Sent back!" }, float: [{ at: { name: `seat-${tableId}`, dy: -64 }, text: "Ugh!", kind: "ugh" }] },
+      { ms: 900, moves: [{ actor: w, to: { name: "counter" } }], bubble: { [w]: null } },
+      { ms: 200, moves: [], carry: { [w]: null }, reveal: [`ready-${orderId}`] },
+      { ms: 800, moves: [{ actor: w, to: { name: "waiter-home" } }], vanish: [w], reveal: [STAFF_KEY("Waiter")] },
+    ],
+  };
+}
+
 function servePart(tableId: string, dish: string[], menus: number): Part {
   const w = "ghost-Waiter";
   const d = "dish-on-counter";
@@ -193,9 +215,10 @@ function cookPart(orderId: string, finished: boolean, dish: string[]): Part {
 
 /**
  * The back end's "Cashier collects ... table T# freed" event (step 4, end of the turn): the diner, who stayed
- * seated while READY_TO_PAY, stands up, walks to the cashier booth, pays, then walks out of the door. The new state already shows the table free; the walker stands in for the diner.
+ * seated while READY_TO_PAY, stands up, walks to the cashier booth, pays (and tips in Custom mode), then walks
+ * out of the door. The new state already shows the table free; the walker stands in for the diner.
  */
-function payAndLeavePart(customer: Customer, tableId: string, amount: string): Part {
+function payAndLeavePart(customer: Customer, tableId: string, amount: string, tip: string | null): Part {
   const c = `walk-${customer.id}`;
   return {
     // Held at the table from the start: the new state has already freed it, but the diner leaves only now.
@@ -206,6 +229,8 @@ function payAndLeavePart(customer: Customer, tableId: string, amount: string): P
       { ms: 700, moves: [{ actor: c, to: { name: "aisle-right" } }] },
       { ms: 500, moves: [{ actor: c, to: { name: "booth" } }] },
       { ms: 550, moves: [], float: [{ at: { name: "booth", dy: -70 }, text: `+${amount}` }] },
+      // Happy Hour tip (decided by the server): its own floating "+$X tip" with a sparkle.
+      ...(tip ? [{ ms: 650, moves: [], float: [{ at: { name: "booth", dy: -92 }, text: `+${tip} tip`, kind: "tip" as const }] }] : []),
       { ms: 650, moves: [{ actor: c, to: { name: "aisle-right" } }] },
       { ms: 1000, moves: [{ actor: c, to: { name: "aisle-left" } }] },
       { ms: 500, moves: [{ actor: c, to: { name: "door-in" } }] },
@@ -314,7 +339,10 @@ export function planAnimation(id: number, before: GameState, after: GameState, a
   if (action.type === "waiterServe" && action.order) {
     const order = after.orders.find((o) => o.id === action.order);
     const c = order && find(after, order.customerId);
-    if (order && c?.table) parts.push(servePart(c.table, order.components, menusBefore));
+    const sentBack = events.some((e) => /sends the .* back/.test(e.text));
+    if (order && c?.table) {
+      parts.push(sentBack ? sendBackPart(c.table, order.id, order.components, menusBefore) : servePart(c.table, order.components, menusBefore));
+    }
   }
   if (action.type === "chefCook" && action.order) {
     const order = after.orders.find((o) => o.id === action.order);
@@ -329,7 +357,8 @@ export function planAnimation(id: number, before: GameState, after: GameState, a
     const paid = e.text.match(/^Cashier collects (\$[\d.]+) from (C\d+).*table (T\d+) freed/);
     if (paid) {
       const c = find(after, paid[2]) ?? find(before, paid[2]);
-      if (c) endOfTurn.push(payAndLeavePart(c, paid[3], paid[1]));
+      const tip = after.tipList?.find((t) => t.customerId === paid[2] && t.turn === after.turn);
+      if (c) endOfTurn.push(payAndLeavePart(c, paid[3], paid[1], tip ? tip.amount : null));
     }
     const left = e.text.match(/^(C\d+) \(\w+\) leaves unhappy/);
     if (left) {

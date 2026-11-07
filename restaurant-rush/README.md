@@ -5,7 +5,7 @@ Restaurant Rush is a turn-based command-line game in Java in which **the player 
 ## Repository
 
 - https://github.com/annikaag-07/SC2002--Project--Bytes-N-Bites-
-- Git tags `stage-1`, `stage-2` and `stage-3` mark the three runnable stages. Each tag builds and passes `./test.sh` on its own, and each stage builds on the previous one.
+- Git tags `stage-1` to `stage-4` mark the runnable stages. The terminal game's rules are complete at `stage-3`; `stage-4` only adds the opt-in hooks the web game's Custom mode uses (see `docs/TRANSITIONS.md`). Each tag builds and passes `./test.sh` on its own, and each stage builds on the previous one.
 - The repository root holds the web game (`restaurant-rush-app/`) and this Java game (`restaurant-rush/`).
 
 Run a stage from a fresh clone:
@@ -15,10 +15,10 @@ git clone https://github.com/annikaag-07/SC2002--Project--Bytes-N-Bites-.git
 ```
 
 ```bash
-cd SC2002--Project--Bytes-N-Bites- && git checkout stage-3 && cd restaurant-rush && ./build.sh && ./run.sh
+cd SC2002--Project--Bytes-N-Bites- && git checkout stage-4 && cd restaurant-rush && ./build.sh && ./run.sh
 ```
 
-(Use `stage-1` or `stage-2` the same way, and `git checkout main` to return.)
+(Use `stage-1`, `stage-2` or `stage-3` the same way, and `git checkout main` to return.)
 
 ## Requirements
 
@@ -240,6 +240,12 @@ New behaviour came in as new classes plugged into existing extension points:
 - **Happy Hour** is a separate policy object in `control`, so pricing (`BillCalculator`) and the turn engine call it instead of growing conditionals. The VIP step is still dispatched through `Customer.applyCustomerPricing`.
 
 The only edits to existing classes are registrations (controller step and phase, menu entries, pricing step) and the matching prompts in the boundary. The polymorphism grep (`instanceof` / `getClass()` in `control` and `boundary`) and the BCE grep (`System.out` / `Scanner` in `control` and `entity`) both still return nothing.
+
+### Stage 3 → Stage 4: Web edition hooks
+
+Compare: https://github.com/annikaag-07/SC2002--Project--Bytes-N-Bites-/compare/stage-3...stage-4
+
+The terminal game's rules do not change: Stage 4 adds an opt-in `GameConfig` setting and three optional `Customer` hooks, used only by the web game's Custom mode. The table is in `docs/TRANSITIONS.md`.
 
 Commits: `git rev-parse --short stage-1` (and the same for each later tag) prints a stage's commit, or see the compare links above.
 

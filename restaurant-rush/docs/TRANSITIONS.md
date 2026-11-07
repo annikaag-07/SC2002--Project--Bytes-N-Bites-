@@ -163,3 +163,66 @@ The only edits to existing classes are registrations (controller step and phase,
 | Modified | `restaurant-rush-app/server/test/rush/web/ModeSelfTest.java` | Host timelines, mixed dishes and the classic fixed list. |
 | Modified | `restaurant-rush-app/test.sh` | Header comment. |
 | Rebuilt | `restaurant-rush-app/client/dist/` | The built front end (`./build.sh`): A `assets/index-CYuGBQO2.js`, D `assets/index-CjDSG55d.css`, A `assets/index-e2PfZ8Ka.css`, D `assets/index-fNLw5Akj.js`, M `index.html`, M `sounds/README.txt`. The asset names carry a content hash. |
+
+## Stage 3 → Stage 4: Web edition hooks
+
+Compare: https://github.com/annikaag-07/SC2002--Project--Bytes-N-Bites-/compare/stage-3...stage-4
+
+The terminal game's rules do not change. Stage 4 adds one opt-in setting and three optional `Customer` hooks for the web game's Custom mode; every default keeps the Stage 3 behaviour.
+
+### New files
+
+None.
+
+### Modified files
+
+| File | What changed | Why (design reason) |
+|---|---|---|
+| `src/main/java/rush/control/GameConfig.java` | New opt-in setting `withChargeAtTurnStart(boolean)` / `isChargeAtTurnStart()`. The default is `false`, and the public constructor and `base()` are unchanged. | Added for the web edition's earlier start-of-turn payment. The web edition no longer uses it (all its modes now charge in step 4 at the end of the turn, as in the brief); the option stays, off by default, so the CLI is unchanged. |
+| `src/main/java/rush/control/GameController.java` | When the setting is on, the Cashier step runs in `beginTurn()` instead of `endTurn()`. | Same rule ("pays next turn at the earliest", one per turn, oldest first), charged at a different point of that next turn. |
+| `src/main/java/rush/entity/Customer.java` | Three optional hooks for the web edition's customer sub-types: `scalePositiveGain(int)` (Happy Hour recovery), `eatingTurns()` (used by `finishEatingIfDone`), and `rejectsServedFood(int)` (checked in `receiveServedOrder`). | Lets the web edition add Picky, Chatty and Grumpy customers as small subclasses. Every default returns the original behaviour. |
+| `src/main/java/rush/entity/Order.java` | Package-private `sendBack(turn)`: the order is READY on the counter again (servable from the next turn). | Used only when a customer's `rejectsServedFood` returns true. |
+| `src/test/java/rush/RulesSelfTest.java` | Two new test groups: the setting, and the hooks (using anonymous test subclasses). | Evidence that each works and that the defaults are unchanged. |
+| `docs/RULES_AND_ASSUMPTIONS.md` | Section 8: decisions D22 (the setting) and D23 (the hooks). | Documents the options. |
+| `docs/TRANSITIONS.md` | This section. | Change analysis. |
+| `README.md` | Repository section lists `stage-4`; transitions section points here. | User-facing documentation. |
+
+### Deleted files
+
+None.
+
+### Evidence earlier behaviour is preserved
+
+With the default setting and default hooks the CLI behaves exactly as at `stage-3`: all earlier test groups pass, and the three Stage 3 scripted runs produce byte-identical logs.
+
+### Web game
+
+| Status | File | What changed |
+|---|---|---|
+| Modified | `README.md` | Four modes (Stage 1, Stage 2, Stage 3 and Custom mode) and the Custom-mode extras. |
+| Modified | `restaurant-rush-app/README.md` | Four modes, sub-types, the Impatient guest and tips. |
+| Modified | `restaurant-rush-app/client/src/animation/choreography.ts` | Send-back walk and the tip at the cashier. |
+| Modified | `restaurant-rush-app/client/src/animation/useChoreography.ts` | Tip and "ugh" floating texts. |
+| Modified | `restaurant-rush-app/client/src/api/types.ts` | Impatient customers, sub-types, per-mode features and tips; four modes. |
+| Modified | `restaurant-rush-app/client/src/components/game/Hud.tsx` | Tips chip; chips shown per mode. |
+| Modified | `restaurant-rush-app/client/src/components/game/Panels.tsx` | Tips in the summary; Play again keeps the mode. |
+| Modified | `restaurant-rush-app/client/src/components/game/World.tsx` | Host and chips shown per mode; tip floats. |
+| Modified | `restaurant-rush-app/client/src/components/pixel/Pixel.tsx` | Sub-type outline, Chatty's phone and typing. |
+| Modified | `restaurant-rush-app/client/src/components/pixel/sprites.ts` | Impatient look, phone and sparkle sprites. |
+| Modified | `restaurant-rush-app/client/src/content/tips.ts` | Stage-prefixed and Custom-mode tips. |
+| Modified | `restaurant-rush-app/client/src/screens/GuideScreen.tsx` | Per-stage notes and the sub-type section. |
+| Modified | `restaurant-rush-app/client/src/screens/MainMenu.tsx` | Four mode cards. |
+| Modified | `restaurant-rush-app/client/src/styles.css` | Sub-type outlines, phone, tip and "ugh" floats, the legend. |
+| Modified | `restaurant-rush-app/client/src/theme/theme.css` | Impatient shirt and tip colours. |
+| Modified | `restaurant-rush-app/server/src/rush/web/ArrivalPlan.java` | Per-mode plans: Stage 1 all Regular, Custom puts the Impatient guest on turn 10. |
+| Added | `restaurant-rush-app/server/src/rush/web/CustomerSubtypes.java` | Picky, Chatty and Grumpy regulars (subclasses using the new `Customer` hooks). |
+| Modified | `restaurant-rush-app/server/src/rush/web/GameSession.java` | Per-mode phases and menus, sub-types and Happy Hour tips. |
+| Added | `restaurant-rush-app/server/src/rush/web/ImpatientCustomer.java` | The Impatient guest. |
+| Modified | `restaurant-rush-app/server/src/rush/web/ModeFeatures.java` | Four modes with feature flags, plus `classic`. |
+| Modified | `restaurant-rush-app/server/src/rush/web/ScoreBoard.java` | Labels for modes of older versions. |
+| Modified | `restaurant-rush-app/server/src/rush/web/StateJson.java` | Features, tips, sub-types and per-mode decisions. |
+| Modified | `restaurant-rush-app/server/src/rush/web/WebServer.java` | Five mode ids; old-version save wording. |
+| Modified | `restaurant-rush-app/server/test/rush/web/AdapterSelfTest.java` | Custom-mode extras. |
+| Modified | `restaurant-rush-app/server/test/rush/web/ModeSelfTest.java` | Four-mode feature matrix and Stage 1/2 parity with the CLI tags. |
+| Modified | `restaurant-rush-app/test.sh` | Passes the back-end path to `ModeSelfTest`. |
+| Rebuilt | `restaurant-rush-app/client/dist/` | The built front end (`./build.sh`): D `assets/index-CYuGBQO2.js`, A `assets/index-CYxE31_w.css`, A `assets/index-DBvuUx4A.js`, D `assets/index-e2PfZ8Ka.css`, M `index.html`. The asset names carry a content hash. |

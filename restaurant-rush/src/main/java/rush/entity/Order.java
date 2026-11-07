@@ -72,6 +72,13 @@ public final class Order {
         servedTurn = turn;
     }
 
+    /** Food sent back on {@code turn}: READY on the counter again, servable from the next turn. */
+    void sendBack(int turn) {
+        status = OrderStatus.READY;
+        readyTurn = turn;
+        servedTurn = 0;
+    }
+
     void markPaid() {
         status = OrderStatus.PAID;
     }

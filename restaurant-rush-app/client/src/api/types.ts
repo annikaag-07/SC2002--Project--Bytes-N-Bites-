@@ -3,15 +3,19 @@
  * The front end only reads these; every rule is decided by the back end.
  */
 
-export type CustomerType = "Regular" | "VIP" | "Critic";
+export type CustomerType = "Regular" | "VIP" | "Critic" | "Impatient";
 export type CustomerState = "WAITING" | "SEATED" | "ORDERED" | "EATING" | "READY_TO_PAY" | "PAID" | "LEFT";
 export type OrderStatus = "PENDING" | "PREPARING" | "READY" | "SERVED" | "PAID" | "CANCELLED";
 export type Phase = "HAPPY_HOUR" | "HOST" | "WAITER" | "CHEF" | "SUMMARY" | "OVER";
 export type Role = "Manager" | "Host" | "Waiter" | "Chef";
 
+/** Regular-customer sub-types (Custom mode only). null in other modes and for VIP, Critic and Impatient customers. */
+export type CustomerSubType = "normal" | "picky" | "chatty" | "grumpy";
+
 export interface Customer {
   id: string;
   type: CustomerType;
+  subType: CustomerSubType | null;
   satisfaction: number;
   /** Satisfaction recorded at payment, or -1. */
   recordedSatisfaction: number;
@@ -105,6 +109,19 @@ export interface GameResult {
   satisfactionMet: boolean;
 }
 
+/** What the current mode has (server: ModeFeatures). The client draws only these. */
+export interface ModeFeatures {
+  vipAndCritic: boolean;
+  /** The Host and their pedestal (Stage 3 and Custom). */
+  host: boolean;
+  combos: boolean;
+  happyHour: boolean;
+  /** Happy Hour tips (Custom only). */
+  tips: boolean;
+  subTypes: boolean;
+  impatient: boolean;
+}
+
 export interface MenuEntry {
   name: string;
   priceCents: number;
@@ -118,8 +135,9 @@ export interface GameState {
   /** Which restaurant day this game is (1, 2, 3...). */
   day: number;
   mode: GameMode | "classic";
-  /** "Stage 3" (or "Classic" for a game started through the API). */
+  /** "Stage 1", "Stage 2", "Stage 3", "Custom" (or "Classic"). */
   modeLabel: string;
+  features: ModeFeatures;
   menu: MenuEntry[];
   turn: number;
   totalTurns: number;
@@ -128,6 +146,13 @@ export interface GameState {
   revenue: string;
   averageSatisfaction: string;
   paidCount: number;
+  /** Happy Hour tips (Custom only, else 0). Shown separately: they are not part of revenue (the $45 target). */
+  tipsCents: number;
+  tips: string;
+  totalEarnedCents: number;
+  totalEarned: string;
+  tipsCountTowardsTarget: boolean;
+  tipList: { turn: number; customerId: string; cents: number; amount: string }[];
   servedCount: number;
   departureCount: number;
   targets: { paid: number; revenueCents: number; revenue: string; averageSatisfaction: number };
@@ -154,14 +179,15 @@ export interface ActionResponse {
   state: GameState;
 }
 
-/** The playable mode (see ModeFeatures on the server). "classic" exists only through the API. */
-export type GameMode = "stage3";
+/** The four playable modes, cumulative like the assignment's stages (see ModeFeatures on the server). */
+export type GameMode = "stage1" | "stage2" | "stage3" | "custom";
 
 export interface ScoreEntry {
   date: string;
   day: number;
+  /** May also be an older version's mode ("base", "rush"). */
   mode: string;
-  /** Display name, e.g. "Stage 3". */
+  /** Display name, e.g. "Stage 2" (older entries: "Base", "Rush"). */
   modeLabel: string;
   victory: boolean;
   stars: number;

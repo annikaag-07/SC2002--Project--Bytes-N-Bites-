@@ -73,6 +73,9 @@ public final class RulesSelfTest {
         run("Happy Hour: once per game, two turns, before staff act", RulesSelfTest::happyHourTiming);
         run("Happy Hour recovery +15, capped, waiting customers only", RulesSelfTest::happyHourRecovery);
         run("Host seats one extra customer, before the Waiter", RulesSelfTest::hostSeating);
+        // Post-stage-3 option used by the web edition
+        run("optional start-of-turn payment frees the table for the next turn", RulesSelfTest::chargeAtTurnStart);
+        run("optional customer hooks: defaults unchanged, overrides work", RulesSelfTest::customerHooks);
 
         System.out.println();
         System.out.println("RulesSelfTest: " + passed + " checks passed, " + failed + " failed");
@@ -659,6 +662,125 @@ public final class RulesSelfTest {
         check("Host gets at most one seat per turn: C2 still queued", sameTurn.getQueue().size() == 1);
         ok(sameTurn.chefAdvance("O1"));
         sameTurn.endTurn();
+    }
+
+    private static void chargeAtTurnStart() {
+        check("default configuration charges at the end of a turn", !GameConfig.base(SEED).isChargeAtTurnStart());
+        Menu pasta = new Menu(List.of(Menu.standard().itemNamed("Pasta")));
+        GameConfig config = GameConfig.base(SEED).withMenu(pasta).withChargeAtTurnStart(true);
+        check("withMenu keeps the payment timing", config.withMenu(pasta).isChargeAtTurnStart());
+        GameController game = new GameController(config, ArrivalSchedule.regulars(SEED, 1));
+        // Same walkthrough as spec 3.3: seat 1, order + unit 2, unit 3, serve 4, READY_TO_PAY at the end of 5.
+        game.beginTurn();
+        ok(game.waiterSeat("C1", "T1"));
+        ok(game.chefWait());
+        game.endTurn();
+        game.beginTurn();
+        ok(game.waiterTakeOrder("C1"));
+        ok(game.chefAdvance("O1"));
+        game.endTurn();
+        game.beginTurn();
+        ok(game.waiterWait());
+        ok(game.chefAdvance("O1"));
+        game.endTurn();
+        game.beginTurn();
+        ok(game.waiterServe("O1"));
+        ok(game.chefWait());
+        game.endTurn();
+        game.beginTurn();
+        waitBoth(game);
+        game.endTurn();
+        Customer c1 = game.getCustomers().get(0);
+        check("READY_TO_PAY at the end of turn 5, not yet paid",
+                c1.getState() == CustomerState.READY_TO_PAY && game.getRevenueCents() == 0);
+        game.beginTurn();
+        check("paid as soon as turn 6 starts, before any staff act",
+                c1.getState() == CustomerState.PAID && !game.hasWaiterActed() && game.getRevenueCents() == 1800);
+        check("table already free for turn 6's decisions", game.getFreeTables().size() == 2);
+        check("same recorded satisfaction (76) as end-of-turn payment", c1.getRecordedSatisfaction() == 76);
+        waitBoth(game);
+        game.endTurn();
+        check("no second charge at the end of the turn", game.getRevenueCents() == 1800 && game.getPaidCount() == 1);
+    }
+
+    /** The post-stage-3 hooks (web sub-types) through tiny test subclasses; defaults are covered above. */
+    private static void customerHooks() {
+        // Eats for two turns instead of one.
+        GameController slow = typedGame("Burger", ArrivalSchedule.builder(SEED)
+                .add(1, (id, i, t, s) -> new RegularCustomer(id, i, t, s) {
+                    @Override
+                    protected int eatingTurns() {
+                        return 2;
+                    }
+                }).build());
+        seatOrderCook(slow);
+        slow.beginTurn();
+        ok(slow.waiterServe("O1"));
+        ok(slow.chefWait());
+        slow.endTurn();
+        Customer eater = waitTurns(slow, 1);
+        check("eatingTurns 2: still eating one turn after being served", eater.getState() == CustomerState.EATING);
+        waitTurns(slow, 1);
+        check("eatingTurns 2: READY_TO_PAY two turns after being served", eater.getState() == CustomerState.READY_TO_PAY);
+
+        // Sends the food back once, accepts it the second time.
+        GameController picky = typedGame("Burger", ArrivalSchedule.builder(SEED)
+                .add(1, (id, i, t, s) -> new RegularCustomer(id, i, t, s) {
+                    private boolean sentBack;
+
+                    @Override
+                    protected boolean rejectsServedFood(int turn) {
+                        if (sentBack) {
+                            return false;
+                        }
+                        sentBack = true;
+                        return true;
+                    }
+                }).build());
+        seatOrderCook(picky);
+        picky.beginTurn();
+        ActionResult first = picky.waiterServe("O1");
+        ok(first);
+        Customer c = picky.getCustomers().get(0);
+        Order order = picky.getOrders().get(0);
+        check("sent back: customer still waiting for food", c.getState() == CustomerState.ORDERED);
+        check("sent back: dish READY again, not servable this turn", order.getStatus() == OrderStatus.READY && !order.isServableOn(picky.getCurrentTurn()));
+        check("sent back: not counted as served", picky.getServedCount() == 0 && first.getMessage().contains("back"));
+        ok(picky.chefWait());
+        picky.endTurn();
+        picky.beginTurn();
+        ok(picky.waiterServe("O1"));
+        check("second serve accepted", c.getState() == CustomerState.EATING && picky.getServedCount() == 1);
+        ok(picky.chefWait());
+        picky.endTurn();
+
+        // Positive gains doubled (Happy Hour recovery +15 -> +30).
+        GameController grumpy = typedGame("Salad", ArrivalSchedule.builder(SEED)
+                .add(1, (id, i, t, s) -> new RegularCustomer(id, i, t, s) {
+                    @Override
+                    protected int scalePositiveGain(int points) {
+                        return points * 2;
+                    }
+                }).build());
+        Customer g = waitTurns(grumpy, 5);
+        check("before Happy Hour: 100 - 5 x 8 = 60", g.getSatisfaction() == 60);
+        grumpy.beginTurn();
+        ok(grumpy.activateHappyHour());
+        check("doubled recovery: 60 -> 90", g.getSatisfaction() == 90);
+        waitBoth(grumpy);
+        grumpy.endTurn();
+    }
+
+    /** Seats C1 on turn 1, takes the order and cooks a 1-unit dish on turn 2. */
+    private static void seatOrderCook(GameController game) {
+        game.beginTurn();
+        ok(game.waiterSeat("C1", "T1"));
+        ok(game.chefWait());
+        game.endTurn();
+        game.beginTurn();
+        ok(game.waiterTakeOrder("C1"));
+        ok(game.chefAdvance("O1"));
+        game.endTurn();
     }
 
     // ---------------------------------------------------------------- helpers

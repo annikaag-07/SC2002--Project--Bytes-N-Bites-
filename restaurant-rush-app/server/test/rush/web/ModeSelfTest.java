@@ -1,5 +1,8 @@
 package rush.web;
 
+import java.io.IOException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -20,14 +23,15 @@ import rush.entity.Table;
 import rush.web.ArrivalPlan.Kind;
 
 /**
- * Tests for the web game's mode: what it has, the seeded VIP / Critic schedule, the brief's eating and payment
- * timing (section 3.2 step 4 and the example in 3.3), and a bot that plays many seeds.
- * Usage: java ... rush.web.ModeSelfTest
+ * Tests for the four web modes: the feature matrix, the seeded VIP / Critic schedule, the brief's eating and
+ * payment timing (section 3.2 step 4 and the example in 3.3), Stage 1 and Stage 2 parity with the terminal
+ * game's scripted runs, and a bot that plays many seeds in every mode.
+ * Usage: java ... rush.web.ModeSelfTest [backend-dir]
  */
 public final class ModeSelfTest {
 
-    /** The mode players start from the menu. */
-    private static final ModeFeatures MODE = ModeFeatures.STAGE3;
+    private static final List<ModeFeatures> PLAYABLE =
+            List.of(ModeFeatures.STAGE1, ModeFeatures.STAGE2, ModeFeatures.STAGE3, ModeFeatures.CUSTOM);
     private static final int SCHEDULE_SEEDS = 5000;
     private static final int BOT_SEEDS = 200;
 
@@ -37,13 +41,15 @@ public final class ModeSelfTest {
     private ModeSelfTest() {
     }
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws IOException {
+        Path backend = Paths.get(args.length > 0 ? args[0] : "../restaurant-rush");
         featureMatrix();
         unknownModes();
         scheduleInvariants();
         briefExample();
         earliestTimelines();
         mixedDishes();
+        stageParity(backend);
         botPlay();
         System.out.println("ModeSelfTest: " + passed + " passed, " + failed + " failed");
         if (failed > 0) {
@@ -51,43 +57,81 @@ public final class ModeSelfTest {
         }
     }
 
-    // ------------------------------------------------------------------ what the mode has
+    // ------------------------------------------------------------------ Task 1 and 2: features per mode
 
     private static void featureMatrix() {
-        String m = MODE.label() + ": ";
-        GameSession s = GameSession.start(11, MODE, 1);
-        check(m + "first decision is Happy Hour", s.phase() == GameSession.Phase.HAPPY_HOUR);
-        check(m + "Happy Hour accepted", GameSession.start(11, MODE, 1).perform("happyHourYes", "", "", "").isSuccess()
-                && s.perform("happyHourNo", "", "", "").isSuccess());
-        check(m + "the Host is asked next and can seat", s.phase() == GameSession.Phase.HOST
-                && s.perform("hostSeat", "C1", "T1", "").isSuccess());
+        for (ModeFeatures mode : PLAYABLE) {
+            String m = mode.label() + ": ";
+            boolean stage3Up = mode == ModeFeatures.STAGE3 || mode == ModeFeatures.CUSTOM;
+            GameSession s = GameSession.start(11, mode, 1);
 
-        List<String> dishes = new ArrayList<>();
-        boolean anyCombo = false;
-        for (MenuItem item : s.game().getMenu().getOfferings()) {
-            dishes.add(item.getName());
-            anyCombo |= item instanceof ComboMeal;
-        }
-        check(m + "menu " + dishes, anyCombo && dishes.size() == 5);
+            // Host and Happy Hour: asked only from Stage 3; rejected by the server before that.
+            check(m + "first decision is " + (stage3Up ? "Happy Hour" : "the Waiter"),
+                    s.phase() == (stage3Up ? GameSession.Phase.HAPPY_HOUR : GameSession.Phase.WAITER));
+            ActionResult hh = s.perform("happyHourNo", "", "", "");
+            ActionResult hhYes = GameSession.start(11, mode, 1).perform("happyHourYes", "", "", "");
+            check(m + "Happy Hour " + (stage3Up ? "accepted" : "rejected with a reason"),
+                    stage3Up ? hh.isSuccess() && hhYes.isSuccess()
+                            : !hh.isSuccess() && !hhYes.isSuccess() && hh.getMessage().contains("no Happy Hour"));
+            ActionResult hostWait = s.perform("hostWait", "", "", "");
+            ActionResult hostSeat = GameSession.start(11, mode, 1).perform("hostSeat", "C1", "T1", "");
+            check(m + "Host " + (stage3Up ? "on duty" : "rejected with a reason"),
+                    stage3Up ? hostWait.isSuccess()
+                            : !hostWait.isSuccess() && !hostSeat.isSuccess() && hostSeat.getMessage().contains("no Host"));
+            if (!stage3Up) {
+                check(m + "Waiter can seat without a Host", s.perform("waiterSeat", "C1", "T1", "").isSuccess());
+            }
 
-        boolean vipSeen = false;
-        boolean criticSeen = false;
-        for (long seed = 1; seed <= 300; seed++) {
-            for (Customer c : allCustomers(GameSession.start(seed, MODE, 1))) {
-                vipSeen |= c.typeLabel().equals("VIP");
-                criticSeen |= c.typeLabel().equals("Critic");
+            // Menu: combos only from Stage 3.
+            List<String> dishes = new ArrayList<>();
+            boolean anyCombo = false;
+            for (MenuItem item : s.game().getMenu().getOfferings()) {
+                dishes.add(item.getName());
+                anyCombo |= item instanceof ComboMeal;
+            }
+            check(m + "menu " + dishes, stage3Up ? anyCombo && dishes.size() == 5
+                    : !anyCombo && dishes.equals(List.of("Salad", "Burger", "Pasta")));
+
+            // Customers over many seeds: VIP/Critic from Stage 2, sub-types and Impatient only in Custom.
+            boolean vipSeen = false;
+            boolean criticSeen = false;
+            boolean impatientOk = true;
+            boolean subTypesOk = true;
+            for (long seed = 1; seed <= 300; seed++) {
+                GameSession g = GameSession.start(seed, mode, 1);
+                List<String> labels = new ArrayList<>();
+                for (Customer c : allCustomers(g)) {
+                    labels.add(c.typeLabel());
+                    vipSeen |= c.typeLabel().equals("VIP");
+                    criticSeen |= c.typeLabel().equals("Critic");
+                }
+                long impatient = labels.stream().filter("Impatient"::equals).count();
+                Customer c4 = allCustomers(g).get(3);
+                impatientOk &= mode.impatient()
+                        ? impatient == 1 && c4.typeLabel().equals("Impatient") && c4.getArrivalTurn() == 10
+                        : impatient == 0;
+                subTypesOk &= mode.subTypes() || g.subTypes().isEmpty();
+            }
+            check(m + (mode.vipAndCritic() ? "VIPs and Critics arrive" : "no VIP or Critic (300 seeds)"),
+                    mode.vipAndCritic() ? vipSeen && criticSeen : !vipSeen && !criticSeen);
+            check(m + (mode.impatient() ? "Impatient exactly once, as C4 on turn 10" : "no Impatient customer") + " (300 seeds)",
+                    impatientOk);
+            check(m + (mode.subTypes() ? "sub-types rolled" : "no sub-types") + " (300 seeds)", subTypesOk);
+
+            // State JSON: the features the client draws from.
+            String json = StateJson.of(GameSession.start(11, mode, 1));
+            check(m + "state JSON carries mode, label and feature flags",
+                    json.contains("\"mode\":\"" + mode.id() + "\"") && json.contains("\"modeLabel\":\"" + mode.label() + "\"")
+                            && json.contains("\"host\":" + mode.host()) && json.contains("\"tips\":" + mode.tips())
+                            && json.contains("\"happyHour\":" + mode.happyHour()));
+            if (!mode.subTypes()) {
+                check(m + "state JSON: no sub-type and zero tips", !json.contains("\"subType\":\"") && json.contains("\"tipsCents\":0"));
             }
         }
-        check(m + "VIPs and Critics arrive (300 seeds)", vipSeen && criticSeen);
-
-        String json = StateJson.of(GameSession.start(11, MODE, 1));
-        check(m + "state JSON carries mode, label and the Happy Hour status",
-                json.contains("\"mode\":\"" + MODE.id() + "\"") && json.contains("\"modeLabel\":\"" + MODE.label() + "\"")
-                        && json.contains("\"happyHour\":{\"available\":true"));
     }
 
     private static void unknownModes() {
-        for (String id : List.of("base", "", "STAGE3", "stage9")) {
+        for (String id : List.of("base", "rush", "", "STAGE1", "stage4")) {
             boolean threw;
             try {
                 ModeFeatures.fromId(id);
@@ -97,47 +141,60 @@ public final class ModeSelfTest {
             }
             check("unknown mode '" + id + "' is rejected", threw);
         }
-        check("high-score labels", ModeFeatures.labelFor("stage3").equals("Stage 3")
-                && ModeFeatures.labelFor("classic").equals("Classic") && ModeFeatures.labelFor("other").equals("other"));
+        check("old high-score modes still have a label",
+                ModeFeatures.labelFor("base").equals("Base") && ModeFeatures.labelFor("rush").equals("Rush")
+                        && ModeFeatures.labelFor("classic").equals("Classic") && ModeFeatures.labelFor("custom").equals("Custom"));
     }
 
-    // ------------------------------------------------------------------ random VIP and Critic arrivals
+    // ------------------------------------------------------------------ Task 3: random VIP and Critic arrivals
 
     private static void scheduleInvariants() {
-        boolean invariants = true;
-        boolean deterministic = true;
-        boolean twoVips = false;
-        boolean twoCritics = false;
-        boolean[] vipAt = new boolean[6];
-        boolean[] criticAt = new boolean[6];
-        for (long seed = 1; seed <= SCHEDULE_SEEDS; seed++) {
-            List<Kind> k = ArrivalPlan.kinds(seed, MODE);
-            deterministic &= k.equals(ArrivalPlan.kinds(seed, MODE));
-            int vips = ArrivalPlan.count(k, Kind.VIP);
-            int critics = ArrivalPlan.count(k, Kind.CRITIC);
-            int regulars = ArrivalPlan.count(k, Kind.REGULAR);
-            invariants &= k.size() == 6 && vips >= 1 && critics >= 1 && regulars >= 2;
-            twoVips |= vips >= 2;
-            twoCritics |= critics >= 2;
-            for (int i = 0; i < 6; i++) {
-                vipAt[i] |= k.get(i) == Kind.VIP;
-                criticAt[i] |= k.get(i) == Kind.CRITIC;
+        for (ModeFeatures mode : PLAYABLE) {
+            boolean invariants = true;
+            boolean deterministic = true;
+            boolean twoVips = false;
+            boolean twoCritics = false;
+            boolean[] vipAt = new boolean[6];
+            boolean[] criticAt = new boolean[6];
+            for (long seed = 1; seed <= SCHEDULE_SEEDS; seed++) {
+                List<Kind> k = ArrivalPlan.kinds(seed, mode);
+                deterministic &= k.equals(ArrivalPlan.kinds(seed, mode));
+                int vips = ArrivalPlan.count(k, Kind.VIP);
+                int critics = ArrivalPlan.count(k, Kind.CRITIC);
+                int regulars = ArrivalPlan.count(k, Kind.REGULAR);
+                int impatient = ArrivalPlan.count(k, Kind.IMPATIENT);
+                invariants &= k.size() == 6;
+                if (mode == ModeFeatures.STAGE1) {
+                    invariants &= regulars == 6;
+                } else {
+                    invariants &= vips >= 1 && critics >= 1 && regulars >= 2;
+                    invariants &= mode.impatient() ? impatient == 1 && k.get(3) == Kind.IMPATIENT : impatient == 0;
+                }
+                twoVips |= vips >= 2;
+                twoCritics |= critics >= 2;
+                for (int i = 0; i < 6; i++) {
+                    vipAt[i] |= k.get(i) == Kind.VIP;
+                    criticAt[i] |= k.get(i) == Kind.CRITIC;
+                }
+            }
+            String m = mode.label() + " schedule (" + SCHEDULE_SEEDS + " seeds): ";
+            check(m + (mode == ModeFeatures.STAGE1 ? "six Regulars"
+                    : ">= 1 VIP, >= 1 Critic, >= 2 Regulars" + (mode.impatient() ? ", Impatient on slot 4" : "")), invariants);
+            check(m + "same seed, same schedule", deterministic);
+            if (mode != ModeFeatures.STAGE1) {
+                boolean everySlot = true;
+                for (int i = 0; i < 6; i++) {
+                    everySlot &= i == ArrivalPlan.IMPATIENT_SLOT && mode.impatient() || vipAt[i] && criticAt[i];
+                }
+                check(m + "every slot sees a VIP and a Critic (incl. turns 1 and 16)", everySlot);
+                check(m + "games with two VIPs and with two Critics occur", twoVips && twoCritics);
             }
         }
-        String m = MODE.label() + " schedule (" + SCHEDULE_SEEDS + " seeds): ";
-        check(m + ">= 1 VIP, >= 1 Critic, >= 2 Regulars", invariants);
-        check(m + "same seed, same schedule", deterministic);
-        boolean everySlot = true;
-        for (int i = 0; i < 6; i++) {
-            everySlot &= vipAt[i] && criticAt[i];
-        }
-        check(m + "every slot sees a VIP and a Critic (incl. turns 1 and 16)", everySlot);
-        check(m + "games with two VIPs and with two Critics occur", twoVips && twoCritics);
         // The built game really uses the plan, on the fixed turns, and a replay rebuilds the same customers.
         boolean matches = true;
         for (long seed = 1; seed <= 200; seed++) {
-            GameSession g = GameSession.start(seed, MODE, 1);
-            List<Kind> plan = ArrivalPlan.kinds(seed, MODE);
+            GameSession g = GameSession.start(seed, ModeFeatures.CUSTOM, 1);
+            List<Kind> plan = ArrivalPlan.kinds(seed, ModeFeatures.CUSTOM);
             List<Customer> all = allCustomers(g);
             for (int i = 0; i < 6; i++) {
                 matches &= all.get(i).getArrivalTurn() == ArrivalPlan.ARRIVAL_TURNS[i]
@@ -145,9 +202,9 @@ public final class ModeSelfTest {
             }
         }
         check("built games follow the plan on turns 1, 4, 7, 10, 13, 16 (200 seeds)", matches);
-        GameSession a = GameSession.start(77, MODE, 1);
+        GameSession a = GameSession.start(77, ModeFeatures.STAGE2, 1);
         AdapterSelfTest.playOut(a);
-        GameSession b = GameSession.replay(77, MODE, 1, a.actionLog());
+        GameSession b = GameSession.replay(77, ModeFeatures.STAGE2, 1, a.actionLog());
         check("Continue (replay) rebuilds the same schedule and result",
                 labels(allCustomers(a)).equals(labels(allCustomers(b))) && StateJson.of(a).equals(StateJson.of(b)));
         check("classic keeps the fixed list Regular, VIP, Regular, Critic, Regular, Regular",
@@ -155,15 +212,12 @@ public final class ModeSelfTest {
                         .equals(List.of("Regular", "VIP", "Regular", "Critic", "Regular", "Regular")));
     }
 
-    // ------------------------------------------------------------------ eating and paying (brief 3.2 and 3.3)
+    // ------------------------------------------------------------------ Task 4: eating and paying
 
-    /**
-     * Brief 3.3: one Regular, Pasta, full attention, checked row by row. The Waiter seats the guest (the Host waits
-     * and Happy Hour is not used), exactly as in the brief's example.
-     */
+    /** Brief 3.3: one Regular, Pasta, full attention (Waiter flow, Stage 1), checked row by row. */
     private static void briefExample() {
         MenuItem pasta = new MenuItem("Pasta", 1800, 2);
-        GameSession s = GameSession.startWith(2002, MODE, new int[] {1}, List.of(Kind.REGULAR),
+        GameSession s = GameSession.startWith(2002, ModeFeatures.STAGE1, new int[] {1}, List.of(Kind.REGULAR),
                 new Menu(List.of(pasta)));
         Customer c = s.game().getCustomers().get(0);
         String[][] script = {
@@ -190,7 +244,6 @@ public final class ModeSelfTest {
                 }
                 rows &= held;
             }
-            play(s, new String[] {"happyHourNo", "hostWait"});
             play(s, script[turn - 1]);
             String expectedEvent = event[turn - 1];
             boolean row = c.getState().name().equals(stateAtEnd[turn - 1])
@@ -211,24 +264,31 @@ public final class ModeSelfTest {
     }
 
     /**
-     * The earliest timeline for a lone Regular arriving on turn a = 1 with perfect play (the Host seats, the Waiter
-     * takes the order the same turn), for u = 1, 2, 3 preparation units.
+     * The earliest timeline for a lone Regular arriving on turn a = 1 with perfect play, for u = 1, 2, 3, in the
+     * Waiter flow (Stage 1, Stage 2) and the Host flow (Stage 3, Custom). Expected turns come from the task's table.
      */
     private static void earliestTimelines() {
         MenuItem salad = new MenuItem("Salad", 900, 1);
         MenuItem pasta = new MenuItem("Pasta", 1800, 2);
         Map<Integer, MenuItem> dishOf = Map.of(1, salad, 2, pasta, 3, new ComboMeal(salad, pasta));
         int a = 1;
-        for (int u = 1; u <= 3; u++) {
-            GameSession s = GameSession.startWith(31, MODE, new int[] {a}, List.of(Kind.REGULAR),
-                    new Menu(List.of(dishOf.get(u))));
-            Timeline t = playPerfect(s, "C1");
-            int[] expected = {a, a, a + u - 1, a + u, a + u + 1, a + u + 2, 100 - 8 * u};
-            int[] actual = {t.seated, t.orderTaken, t.ready, t.served, t.readyToPay, t.paid, t.recorded};
-            check("u=" + u + ": seated/order/READY/SERVED/READY_TO_PAY/PAID/recorded = " + java.util.Arrays.toString(actual),
-                    java.util.Arrays.equals(expected, actual));
-            check("u=" + u + ": table occupied during turn " + t.paid + "'s decisions, freed at its end, reusable from turn "
-                    + (t.paid + 1), t.occupiedDuringPaidTurn && t.freedAtEndOf == t.paid && t.freeNextTurn);
+        for (ModeFeatures mode : PLAYABLE) {
+            boolean hostFlow = mode.host();
+            for (int u = 1; u <= 3; u++) {
+                GameSession s = GameSession.startWith(31, mode, new int[] {a}, List.of(Kind.REGULAR),
+                        new Menu(List.of(dishOf.get(u))));
+                Timeline t = playPerfect(s, "C1");
+                int[] expected = hostFlow
+                        ? new int[] {a, a, a + u - 1, a + u, a + u + 1, a + u + 2, 100 - 8 * u}
+                        : new int[] {a, a + 1, a + u, a + u + 1, a + u + 2, a + u + 3, 100 - 8 * (u + 1)};
+                int[] actual = {t.seated, t.orderTaken, t.ready, t.served, t.readyToPay, t.paid, t.recorded};
+                check(mode.label() + (hostFlow ? " (Host seats)" : " (Waiter seats)") + ", u=" + u
+                        + ": seated/order/READY/SERVED/READY_TO_PAY/PAID/recorded = " + java.util.Arrays.toString(actual),
+                        java.util.Arrays.equals(expected, actual));
+                check(mode.label() + ", u=" + u + ": table occupied during turn " + t.paid
+                        + "'s decisions, freed at its end, reusable from turn " + (t.paid + 1),
+                        t.occupiedDuringPaidTurn && t.freedAtEndOf == t.paid && t.freeNextTurn);
+            }
         }
     }
 
@@ -283,7 +343,7 @@ public final class ModeSelfTest {
         boolean freeNextTurn;
     }
 
-    /** Plays a lone customer perfectly (Host seats; Waiter serves > takes an order > seats; Chef cooks). */
+    /** Plays a lone customer perfectly (Host seats if present, else the Waiter; serve > order > seat; Chef cooks). */
     private static Timeline playPerfect(GameSession s, String id) {
         Timeline t = new Timeline();
         Customer c = s.game().getCustomers().get(0);
@@ -320,52 +380,81 @@ public final class ModeSelfTest {
         return t;
     }
 
+    // ------------------------------------------------------------------ Stage 1 and 2 parity with the terminal game
+
+    private static void stageParity(Path backend) throws IOException {
+        record Run(String name, ModeFeatures mode, boolean victory, int paid, long revenue, String average) { }
+        List<Run> runs = List.of(
+                new Run("stage1-victory", ModeFeatures.STAGE1, true, 4, 5100, "78.0"),
+                new Run("stage1-defeat", ModeFeatures.STAGE1, false, 1, 900, "84.0"),
+                new Run("stage2-victory", ModeFeatures.STAGE2, true, 4, 4920, "79.8"),
+                new Run("stage2-five-payers", ModeFeatures.STAGE2, true, 5, 6720, "70.2"),
+                new Run("stage2-defeat", ModeFeatures.STAGE2, false, 4, 4920, "57.3"));
+        for (Run run : runs) {
+            // Stage 2 parity uses the terminal game's fixed list via the test-only start; Stage 1 is all Regulars anyway.
+            GameSession s = run.mode() == ModeFeatures.STAGE1
+                    ? GameSession.start(2002, ModeFeatures.STAGE1, 1)
+                    : GameSession.startWith(2002, ModeFeatures.STAGE2, ArrivalPlan.ARRIVAL_TURNS,
+                            ArrivalPlan.kinds(2002, ModeFeatures.CLASSIC), GameSession.menuFor(ModeFeatures.STAGE2));
+            AdapterSelfTest.replayScript(backend, run.name(), s);
+            rush.control.GameResult r = s.game().getResult();
+            check(run.name() + " through " + run.mode().label() + ": " + (r.isVictory() ? "VICTORY" : "DEFEAT") + ", "
+                    + r.getPaidCount() + " paid, " + rush.entity.Money.format(r.getRevenueCents()) + ", avg " + r.getAverageText(),
+                    r.isVictory() == run.victory() && r.getPaidCount() == run.paid() && r.getRevenueCents() == run.revenue()
+                            && r.getAverageText().equals(run.average()));
+            List<String> expected = AdapterSelfTest.cliEventLines(backend, run.name());
+            List<String> actual = AdapterSelfTest.eventLines(s);
+            check(run.name() + ": all " + actual.size() + " event lines identical to the terminal log", actual.equals(expected));
+        }
+    }
 
     // ------------------------------------------------------------------ bot over many seeds
 
     private static void botPlay() {
-        boolean noCrash = true;
-        boolean neverEarly = true;
-        boolean atMostFive = true;
-        boolean tableHeld = true;
-        int paidTotal = 0;
-        for (long seed = 1; seed <= BOT_SEEDS; seed++) {
-            try {
-                GameSession s = GameSession.start(seed, MODE, 1);
-                Random rng = new Random(seed);
-                Map<String, Integer> paidAt = new HashMap<>();
-                for (int guard = 0; guard < 1000 && s.phase() != GameSession.Phase.OVER; guard++) {
-                    if (s.phase() == GameSession.Phase.WAITER) {
-                        // Anyone READY_TO_PAY from an earlier turn still holds their table during the decisions.
-                        for (Customer c : s.game().getCustomers()) {
-                            if (c.getState() == CustomerState.READY_TO_PAY) {
-                                tableHeld &= c.getTable() != null && c.getTable().getOccupant() == c;
+        for (ModeFeatures mode : PLAYABLE) {
+            boolean noCrash = true;
+            boolean neverEarly = true;
+            boolean atMostFive = true;
+            boolean tableHeld = true;
+            int paidTotal = 0;
+            for (long seed = 1; seed <= BOT_SEEDS; seed++) {
+                try {
+                    GameSession s = GameSession.start(seed, mode, 1);
+                    Random rng = new Random(seed);
+                    Map<String, Integer> paidAt = new HashMap<>();
+                    for (int guard = 0; guard < 1000 && s.phase() != GameSession.Phase.OVER; guard++) {
+                        if (s.phase() == GameSession.Phase.WAITER) {
+                            // Anyone READY_TO_PAY from an earlier turn still holds their table during the decisions.
+                            for (Customer c : s.game().getCustomers()) {
+                                if (c.getState() == CustomerState.READY_TO_PAY) {
+                                    tableHeld &= c.getTable() != null && c.getTable().getOccupant() == c;
+                                }
                             }
                         }
-                    }
-                    if (s.phase() == GameSession.Phase.SUMMARY) {
-                        for (Customer c : s.game().getCustomers()) {
-                            if (c.getState() == CustomerState.PAID && paidAt.putIfAbsent(c.getId(), s.game().getCurrentTurn()) == null) {
-                                neverEarly &= s.game().getCurrentTurn() >= c.getReadyToPayTurn() + 1
-                                        && c.getReadyToPayTurn() >= c.getOrder().getServedTurn() + 1;
+                        if (s.phase() == GameSession.Phase.SUMMARY) {
+                            for (Customer c : s.game().getCustomers()) {
+                                if (c.getState() == CustomerState.PAID && paidAt.putIfAbsent(c.getId(), s.game().getCurrentTurn()) == null) {
+                                    neverEarly &= s.game().getCurrentTurn() >= c.getReadyToPayTurn() + 1
+                                            && c.getReadyToPayTurn() >= c.getOrder().getServedTurn() + 1;
+                                }
                             }
                         }
+                        greedyStep(s, rng);
                     }
-                    greedyStep(s, rng);
+                    noCrash &= s.phase() == GameSession.Phase.OVER;
+                    atMostFive &= s.game().getPaidCount() <= 5;
+                    paidTotal += s.game().getPaidCount();
+                } catch (RuntimeException e) {
+                    noCrash = false;
+                    System.out.println("  crash: " + mode.id() + " seed " + seed + ": " + e);
                 }
-                noCrash &= s.phase() == GameSession.Phase.OVER;
-                atMostFive &= s.game().getPaidCount() <= 5;
-                paidTotal += s.game().getPaidCount();
-            } catch (RuntimeException e) {
-                noCrash = false;
-                System.out.println("  crash: " + MODE.id() + " seed " + seed + ": " + e);
             }
+            String m = mode.label() + " bot, " + BOT_SEEDS + " seeds: ";
+            check(m + "every game finishes (" + paidTotal + " payments in total)", noCrash && paidTotal > 0);
+            check(m + "nobody pays before READY_TO_PAY + 1, nor becomes READY_TO_PAY before SERVED + 1", neverEarly);
+            check(m + "READY_TO_PAY diners keep their table during the next turn's decisions", tableHeld);
+            check(m + "never more than five paid customers", atMostFive);
         }
-        String m = MODE.label() + " bot, " + BOT_SEEDS + " seeds: ";
-        check(m + "every game finishes (" + paidTotal + " payments in total)", noCrash && paidTotal > 0);
-        check(m + "nobody pays before READY_TO_PAY + 1, nor becomes READY_TO_PAY before SERVED + 1", neverEarly);
-        check(m + "READY_TO_PAY diners keep their table during the next turn's decisions", tableHeld);
-        check(m + "never more than five paid customers", atMostFive);
     }
 
     // ------------------------------------------------------------------ helpers

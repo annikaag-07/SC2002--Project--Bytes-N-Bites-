@@ -1,7 +1,7 @@
 import type { GameState } from "@/api/types";
 import { store, type StoreState } from "@/store/gameStore";
 
-/** Top bar: menu, turn progress, the three victory targets, Happy Hour, mode/day, and toggles. */
+/** Top bar: menu, turn progress, the three victory targets, Tips and Happy Hour (only in modes that have them), mode/day, and toggles. */
 export function Hud({ game, ui, onLog }: { game: GameState; ui: StoreState; onLog: () => void }) {
   const avg = game.averageSatisfaction;
   const hh = game.happyHour;
@@ -29,13 +29,20 @@ export function Hud({ game, ui, onLog }: { game: GameState; ui: StoreState; onLo
       <span className={`stat ${met.revenue ? "met" : ""}`}>
         Revenue <strong>{game.revenue}</strong>/{game.targets.revenue}
       </span>
+      {game.features.tips && (
+        <span className="stat" title="Happy Hour tips (not part of the $45 revenue target)">
+          Tips <strong>{game.tips}</strong>
+        </span>
+      )}
       <span className={`stat ${met.avg ? "met" : ""}`}>
         Avg <strong>{avg}</strong>/{game.targets.averageSatisfaction}
       </span>
-      <span className={`stat ${hh.remainingTurns > 0 ? "happy" : ""}`}>
-        Happy Hour{" "}
-        <strong>{hh.remainingTurns > 0 ? `ON ${hh.remainingTurns}` : hh.available ? "ready" : "used"}</strong>
-      </span>
+      {game.features.happyHour && (
+        <span className={`stat ${hh.remainingTurns > 0 ? "happy" : ""}`}>
+          Happy Hour{" "}
+          <strong>{hh.remainingTurns > 0 ? `ON ${hh.remainingTurns}` : hh.available ? "ready" : "used"}</strong>
+        </span>
+      )}
       <span className="hud-spacer" />
       <span className="mode-label">
         {game.modeLabel} · day {game.day}

@@ -79,6 +79,7 @@
   --shirt-vip-tie: #f7c948;
   --shirt-critic: #f2f2f2;
   --critic-beret: #c8283f;
+  --shirt-impatient: #ff8a2a;
 
   /* Staff uniforms */
   --chef-jacket: #f4f4f4;
@@ -163,10 +164,11 @@
   --booth-top: #2b3666;
   --booth-trim: #6ee7ff;
   --booth-trim-2: #ff4fd8;
-  /* waiter menus */
+  /* waiter menus and tips */
   --menu-cover: #1b2244;
   --menu-trim: #ff4fd8;
   --menu-ink: #6ee7ff;
+  --tip-ink: #6ee7ff;
 }
 
 /* ====================================================================== Cozy Café */
@@ -273,6 +275,7 @@
   --menu-cover: #6b4426;
   --menu-trim: #f3e3c3;
   --menu-ink: #f3e3c3;
+  --tip-ink: #f2c66d;
 }
 
 /* ====================================================================== Tokyo Diner */
@@ -379,4 +382,5 @@
   --menu-cover: #b3202f;
   --menu-trim: #e6b422;
   --menu-ink: #f7ead2;
+  --tip-ink: #f2c94c;
 }

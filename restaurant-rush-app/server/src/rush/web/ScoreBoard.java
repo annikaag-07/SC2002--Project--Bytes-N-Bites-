@@ -19,6 +19,7 @@ final class ScoreBoard {
     record Entry(String date, int day, String mode, boolean victory, int stars, int paid, long revenueCents,
                  String average, String seed) {
         String toJson() {
+            // modeLabel also names modes of older versions ("base", "rush") that may still be in the file.
             return new Json.Obj().put("date", date).put("day", day).put("mode", mode)
                     .put("modeLabel", ModeFeatures.labelFor(mode)).put("victory", victory)
                     .put("stars", stars)

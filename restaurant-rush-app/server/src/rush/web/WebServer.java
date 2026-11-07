@@ -24,7 +24,7 @@ import rush.entity.ActionResult;
  *
  * <pre>
  * GET  /api/status                         -> { hasSave, hasGame }
- * POST /api/new?seed=&amp;mode=stage3|classic -> state (unknown mode: 400)
+ * POST /api/new?seed=&amp;mode=stage1|stage2|stage3|custom|classic -> state (unknown mode: 400)
  * POST /api/continue                       -> state (replays the saved game)
  * GET  /api/state                          -> state
  * POST /api/action?type=&amp;customer=&amp;table=&amp;order= -> { result, events, state }
@@ -160,7 +160,7 @@ public final class WebServer {
     }
 
     /**
-     * Replays the save. A save with an unknown mode, or anything unreadable, cannot be
+     * Replays the save. A save from an older version (mode "base" or "rush", or anything unreadable) cannot be
      * replayed: it is deleted and treated as "no save" instead of crashing the server.
      *
      * @return the restored game, or null if there is no usable save
@@ -178,7 +178,7 @@ public final class WebServer {
         }
     }
 
-    /** @return true if a save exists and was written for a known mode (other saves are discarded) */
+    /** @return true if a save exists and was written for a current mode (old "base"/"rush" saves are discarded) */
     private boolean hasUsableSave() throws IOException {
         if (!Files.exists(saveFile)) {
             return false;

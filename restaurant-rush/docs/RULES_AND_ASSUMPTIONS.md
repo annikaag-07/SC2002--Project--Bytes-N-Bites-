@@ -116,3 +116,10 @@ The reaction is reported in the serve event.
 | D19 | On the activation turn, recovery is applied at the moment of activation (after the start-of-turn display). On the second active turn it is applied in `beginTurn`, right after arrivals, so the start-of-turn display already shows recovered values. | Both happen before any staff act, as required. |
 | D20 | Activating Happy Hour while nobody is waiting is allowed; the recovery then has no effect. | It is a manager choice; wasting it is a valid (bad) decision. |
 | D21 | A newly arrived customer (satisfaction 100) is eligible for recovery but is capped at 100. | Follows directly from "maximum 100". |
+
+## 8. Post-stage-3 option (web edition)
+
+| # | Decision | Rationale |
+|---|---|---|
+| D22 | `GameConfig.withChargeAtTurnStart(true)` moves the Cashier step to the start of the turn. A customer who became READY_TO_PAY on turn t is charged as soon as turn t is over, before any staff act on turn t+1. The CLI keeps the default (charge in step 4, at the end of the turn). | Still "pays next turn at the earliest" and one payment per turn, but the table is free during turn t+1. Kept as an option only: no web mode uses it any more (the web edition's Stage 1, 2, 3 and Custom modes all charge in step 4 at the end of the turn, as the brief says). |
+| D23 | `Customer` has three optional hooks (`scalePositiveGain`, `eatingTurns`, `rejectsServedFood`). Their defaults keep every rule above unchanged; only the web edition's Normal sub-types override them. A rejected dish goes back to READY with `readyTurn = turn`, so the normal "served next turn at the earliest" rule applies. | Smallest isolated change that lets new customer behaviours be added by subclassing. |

@@ -167,6 +167,7 @@ export const CUSTOMER_LOOKS: Record<CustomerType, Look> = {
   Regular: { head: "hair", shirt: "var(--shirt-regular)", accent: "var(--shirt-regular)" },
   VIP: { head: "slick", shirt: "var(--shirt-vip)", accent: "var(--shirt-vip-tie)" },
   Critic: { head: "beret", shirt: "var(--shirt-critic)", accent: "#c9cde0", item: "notepad" },
+  Impatient: { head: "hair", shirt: "var(--shirt-impatient)", accent: "var(--shirt-impatient)" },
 };
 
 export const STAFF_LOOKS: Record<Role | "Cashier", Look> = {
@@ -266,6 +267,18 @@ export const DOOR: Sprite = {
 export const ANGER: Sprite = {
   rows: [".r.r.", "rr.rr", ".....", "rr.rr", ".r.r."],
   palette: { r: "var(--anger)" },
+};
+
+/** Chatty customer's phone. */
+export const PHONE: Sprite = {
+  rows: ["kkk", "kck", "kck", "kkk"],
+  palette: { k: "#1a1c2c", c: "#7fd8ff" },
+};
+
+/** Little sparkle beside a tip. */
+export const SPARKLE: Sprite = {
+  rows: ["..y..", ".yyy.", "yyyyy", ".yyy.", "..y.."],
+  palette: { y: "var(--tip-ink)" },
 };
 
 export const COIN: Sprite = {

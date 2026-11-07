@@ -77,6 +77,40 @@ public abstract class Customer {
         return null;
     }
 
+    // ---- Optional behaviour hooks (added after stage 3 for the web edition's customer sub-types).
+    // ---- Every default keeps the original behaviour, so Regular, VIP and Critic customers are unchanged.
+
+    /**
+     * Scales a positive satisfaction gain (Happy Hour recovery) before it is applied. Default: unchanged.
+     *
+     * @param points the gain the rules award
+     * @return the gain actually applied
+     */
+    protected int scalePositiveGain(int points) {
+        return points;
+    }
+
+    /**
+     * Number of full turns this customer spends eating after being served. Default: 1 (served on turn t,
+     * READY_TO_PAY on turn t+1).
+     *
+     * @return eating turns, at least 1
+     */
+    protected int eatingTurns() {
+        return 1;
+    }
+
+    /**
+     * Whether this customer sends the food back the moment it is served. If true, the order returns to the
+     * counter as READY (servable again from the next turn) and the customer keeps waiting. Default: never.
+     *
+     * @param turn the turn the food was served
+     * @return true to send the food back this time
+     */
+    protected boolean rejectsServedFood(int turn) {
+        return false;
+    }
+
     /**
      * Changes satisfaction by {@code delta}, kept between 0 and 100.
      *
@@ -107,7 +141,7 @@ public abstract class Customer {
         if (!state.isAwaitingService()) {
             return false;
         }
-        changeSatisfaction(points);
+        changeSatisfaction(scalePositiveGain(points));
         return true;
     }
 
@@ -127,7 +161,7 @@ public abstract class Customer {
      * @return true if the customer just became READY_TO_PAY
      */
     public final boolean finishEatingIfDone(int turn) {
-        if (state == CustomerState.EATING && order.getServedTurn() < turn) {
+        if (state == CustomerState.EATING && order.getServedTurn() + Math.max(1, eatingTurns()) <= turn) {
             state = CustomerState.READY_TO_PAY;
             readyToPayTurn = turn;
             return true;
@@ -164,6 +198,11 @@ public abstract class Customer {
 
     /** Serving rule: the customer starts eating, then reacts in its own way. Returns the reaction, or null. */
     final String receiveServedOrder(int turn) {
+        if (rejectsServedFood(turn)) {
+            // Sent back: the dish returns to the counter and the customer keeps waiting (state stays ORDERED).
+            order.sendBack(turn);
+            return id + " sends the " + order.getItem().getName() + " back! It returns to the counter.";
+        }
         state = CustomerState.EATING;
         return onServed(turn);
     }
