@@ -1,5 +1,5 @@
 @startuml
-title <size:40><b>Bytes N Bites: Sequence diagram, Part 2 "Cook, serve, eat, pay and check the result"</b></size>\n<size:24>Stage 3 code (unchanged in Stage 4). Continues Part 1 ("Take an order"): customer C2's order O2. Run: ./run.sh --seed 2002 < runs/stage3-features-demo.txt</size>
+title <size:40><b>Bytes N Bites: Sequence diagram, Part 2 "Arrival and seating, then cook, serve, eat, pay and check the result"</b></size>\n<size:24>Stage 3 code (unchanged in Stage 4). Continues Part 1 ("Take an order"): customer C2's order O2. Run: ./run.sh --seed 2002 < runs/stage3-features-demo.txt</size>
 skinparam shadowing false
 skinparam dpi 150
 skinparam defaultFontName Arial
@@ -15,6 +15,7 @@ autonumber "<b>0"
 actor Manager
 boundary ":ConsoleUI" as UI
 control ":GameController" as GC
+entity ":Host" as HO
 entity ":Chef" as CH
 entity ":Waiter" as W
 entity ":Cashier" as CA
@@ -24,14 +25,47 @@ entity "o2 : Order" as O
 control ":GameResult" as GR
 
 note across
-<b>Stage:</b> 3 (the same code runs in Stage 4). <b>Continues Part 1:</b> on turn 4 the Waiter took C2's order O2 (Salad + Burger Combo, 2 units),
+<b>Stage:</b> 3 (the same code runs in Stage 4). <b>Turn 4 starts:</b> C2 (VIP) arrives and the Host seats C2 at table T2 (drawn first below).
+<b>Then Part 1:</b> on turn 4 the Waiter took C2's order O2 (Salad + Burger Combo, 2 units),
 and its price was locked at $15.55 (VIP 90%, then Happy Hour 80%).
-<b>Starting conditions:</b> o2 is PENDING; c2 (VIP) is ORDERED at table T2.
+<b>After Part 1:</b> o2 is PENDING; c2 (VIP) is ORDERED at table T2.
 <b>Outcome:</b> O2 goes READY (turn 5), SERVED (turn 6); C2 eats, becomes READY_TO_PAY (turn 7) and pays $15.55 (turn 8, satisfaction 95 recorded).
 After turn 18: 4 paid, $72.85, average 82.8, so <b>VICTORY</b>. Other customers' steps are not drawn.
 end note
 
-loop while not game.isGameOver()  (one pass per turn, up to turn 18)
+loop while not game.isGameOver()  (one pass per turn, turns 1 to 18)
+
+== Turn 4 (before Part 1): C2 arrives and the Host seats C2 ==
+
+UI -> GC ++ : beginTurn()
+GC -> GC : host, waiter, chef, cashier\n.startTurn()
+loop for each customer in schedule.arrivalsOn(4)
+  GC -> R ++ : admitArrival(c2)
+  note right of C : state = WAITING,\nsatisfaction 100
+  return
+end
+return arrival events
+note over UI, GC : The Manager switches Happy Hour on here (turn 4); not drawn.
+
+UI -> GC ++ : hostSeat("C2", "T2")
+GC -> GC : checkHostMayAct()\n[turn in progress, waiter not yet acted]
+GC -> HO ++ : seat(restaurant, "C2", "T2")
+alt hasActedThisTurn()
+  HO --> GC : alreadyActed()
+else
+  HO -> R ++ : seatCustomer("C2", "T2")
+  note right of R : guards: C2 is in the queue,\na table is free, T2 is free
+  R -> C ++ : seatAt(T2)
+  note right of C : state = SEATED
+  return
+  return ActionResult.ok
+  HO -> HO : markActed()
+  HO --> GC : ok("Host seats C2 at T2.")
+end
+deactivate HO
+return ActionResult.ok
+
+== Turn 4: Part 1 "Take an order" happens here (the Waiter takes C2's order O2) ==
 
 == Turns 4 and 5: the Chef prepares O2 (PENDING -> PREPARING -> READY) ==
 
