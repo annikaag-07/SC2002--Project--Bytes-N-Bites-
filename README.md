@@ -72,3 +72,5 @@ Full list of new, changed and deleted files per stage, with reasons: [TRANSITION
 - [Stage 2 class diagram](docs/diagrams/stage-2-class.png)
 - [Stage 3 class diagram](docs/diagrams/stage-3-class.png)
 - [Stage 4 class diagram](docs/diagrams/stage-4-class.png)
+- [Sequence diagram Part 1: Take an order (Stage 3)](docs/diagrams/sequence-part1-take-an-order.png)
+- [Sequence diagram Part 2: Cook, serve, eat, pay and result (Stage 3)](docs/diagrams/sequence-part2-cook-serve-pay.png)

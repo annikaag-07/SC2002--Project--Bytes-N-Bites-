@@ -1,0 +1,116 @@
+@startuml
+title <size:40><b>Bytes N Bites: Sequence diagram, use case "Take an order"</b></size>\n<size:24>Stage 3 code (unchanged in Stage 4). Scenario: the Waiter takes customer C2's order.</size>
+skinparam shadowing false
+skinparam dpi 150
+skinparam defaultFontName Arial
+skinparam sequenceMessageAlign center
+skinparam responseMessageBelowArrow true
+skinparam noteBackgroundColor #FFF8DC
+skinparam noteBorderColor #C9B458
+skinparam sequenceGroupBorderColor #555555
+skinparam ParticipantPadding 12
+autonumber "<b>0"
+
+actor Manager
+boundary ":ConsoleUI" as UI
+control ":GameController" as GC
+entity ":Waiter" as W
+entity ":Restaurant" as R
+entity "c2 : Customer" as C
+entity "o : Order" as O
+entity ":MenuItem" as MI
+control ":BillCalculator" as BC
+control ":HappyHourPolicy" as HH
+
+note across
+<b>Stage:</b> 3 (the same code runs in Stage 4)
+<b>Starting conditions:</b> a turn is in progress and it is the Waiter's step (after the Host);
+customer C2 has been seated at a table (state SEATED).
+<b>Outcome (success):</b> a new Order with status PENDING and a locked price; C2's state becomes ORDERED;
+the Waiter's task for this turn is used; the result is added to the event log and printed.
+<b>Outcome (failure):</b> nothing changes, the reason is printed and the Manager is asked again.
+end note
+
+loop until a Waiter choice succeeds
+  UI -> Manager : "Waiter choice:" prompt
+  Manager -> UI : enter "2" (Take an order)
+  UI -> Manager : "Customer whose order to take:" prompt
+  Manager -> UI : enter "2"
+  UI -> UI : readId(prompt, "C")
+  note right of UI : a bare number gets the prefix,\nso "2" becomes "C2"
+  UI -> GC ++ : waiterTakeOrder("C2")
+  GC -> GC : checkWaiterMayAct()
+  alt no turn in progress
+    GC --> UI : ActionResult.fail("No turn is in progress.")
+  else turn in progress (checkWaiterMayAct() returns null)
+    GC -> W ++ : takeOrder(restaurant, "C2", menu, currentTurn)
+    alt hasActedThisTurn()
+      W -> W : alreadyActed()
+      W --> GC : ActionResult.fail(...)
+    else Waiter has not acted this turn
+      W -> R ++ : findCustomer("C2")
+      return Optional<Customer>
+      alt no customer "C2"
+        W --> GC : ActionResult.fail("There is no customer 'C2'.")
+      else c2.getState() != SEATED
+        W --> GC : ActionResult.fail("C2 is not seated without an order (state ...).")
+      else c2 is SEATED
+        W -> C ++ : chooseFrom(menu)
+        note right of C : c2 picks with its own\nseeded Random (choiceRng)
+        return item : MenuItem
+        W -> R ++ : createOrder(c2, item, turn)
+        create O
+        R -> O : «create» Order("O" + n, c2, item, turn)
+        note right of O : status = PENDING
+        R -> R : orders.add(o)
+        R -> C ++ : attachOrder(o)
+        note right of C : state = ORDERED
+        return
+        return o
+        W -> W : markActed()
+        W --> GC : ActionResult.ok("Waiter takes C2's order ...")
+      end
+    end
+    deactivate W
+    alt result is a failure
+      GC --> UI : the failed ActionResult
+    else result is a success
+      GC -> R ++ : findCustomer("C2")
+      return Optional<Customer> (orElseThrow gives c2)
+      GC -> C ++ : getOrder()
+      return o
+      GC -> BC ++ : lockPrice(o, currentTurn)
+      BC -> O ++ : getItem()
+      return item
+      BC -> MI ++ : getPriceCents()
+      return base
+      BC -> O ++ : getCustomer()
+      return c2
+      BC -> C ++ : applyCustomerPricing(base)
+      note right of C
+        <b>Polymorphism</b> (dynamic dispatch):
+        if c2 is a VIPCustomer it returns 90% of base;
+        RegularCustomer and CriticCustomer return base
+      end note
+      return afterCustomer
+      BC -> HH ++ : applyDiscount(afterCustomer, turn)
+      note right of HH : 80% while Happy Hour\nis active, else unchanged
+      return price
+      BC -> O ++ : lockPrice(price)
+      note right of O : throws if the price\nwas already locked
+      return
+      return price
+      GC -> GC : record(ActionResult.ok(message + " Locked price: ..."))
+      note right of GC : adds a GameEvent to eventLog
+      GC --> UI : ActionResult.ok
+    end
+  end
+  deactivate GC
+  UI -> UI : report(result)
+  alt success
+    UI -> Manager : prints "* <message>"; the Waiter step ends
+  else failure
+    UI -> Manager : prints "! Not allowed: <reason> Choose again."
+  end
+end
+@enduml

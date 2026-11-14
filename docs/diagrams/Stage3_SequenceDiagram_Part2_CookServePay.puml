@@ -1,0 +1,144 @@
+@startuml
+title <size:40><b>Bytes N Bites: Sequence diagram, Part 2 "Cook, serve, eat, pay and check the result"</b></size>\n<size:24>Stage 3 code (unchanged in Stage 4). Continues Part 1 ("Take an order"): customer C2's order O2. Run: ./run.sh --seed 2002 < runs/stage3-features-demo.txt</size>
+skinparam shadowing false
+skinparam dpi 150
+skinparam defaultFontName Arial
+skinparam sequenceMessageAlign center
+skinparam responseMessageBelowArrow true
+skinparam noteBackgroundColor #FFF8DC
+skinparam noteBorderColor #C9B458
+skinparam sequenceGroupBorderColor #555555
+skinparam ParticipantPadding 12
+skinparam sequenceDividerBackgroundColor #E8EEF6
+autonumber "<b>0"
+
+actor Manager
+boundary ":ConsoleUI" as UI
+control ":GameController" as GC
+entity ":Chef" as CH
+entity ":Waiter" as W
+entity ":Cashier" as CA
+entity ":Restaurant" as R
+entity "c2 : VIPCustomer" as C
+entity "o2 : Order" as O
+control ":GameResult" as GR
+
+note across
+<b>Stage:</b> 3 (the same code runs in Stage 4). <b>Continues Part 1:</b> on turn 4 the Waiter took C2's order O2 (Salad + Burger Combo, 2 units),
+and its price was locked at $15.55 (VIP 90%, then Happy Hour 80%).
+<b>Starting conditions:</b> o2 is PENDING; c2 (VIP) is ORDERED at table T2.
+<b>Outcome:</b> O2 goes READY (turn 5), SERVED (turn 6); C2 eats, becomes READY_TO_PAY (turn 7) and pays $15.55 (turn 8, satisfaction 95 recorded).
+After turn 18: 4 paid, $72.85, average 82.8, so <b>VICTORY</b>. Other customers' steps are not drawn.
+end note
+
+loop while not game.isGameOver()  (one pass per turn, up to turn 18)
+
+== Turns 4 and 5: the Chef prepares O2 (PENDING -> PREPARING -> READY) ==
+
+UI -> GC ++ : chefAdvance("O2")
+GC -> GC : checkChefMayAct()\n[the Waiter has acted]
+GC -> CH ++ : advance(restaurant, "O2", turn)
+CH -> R ++ : findOrder("O2")
+return o2
+alt order not in the kitchen
+  CH --> GC : ActionResult.fail(...)
+else PENDING or PREPARING
+  CH -> O ++ : advanceUnit(turn)
+  note right of O
+    turn 4: 1 of 2 units, PREPARING
+    turn 5: 2 of 2 units, READY,
+    readyTurn = 5
+  end note
+  return true when READY
+  CH -> CH : markActed()
+  CH --> GC : ok("... READY (can be served from next turn).")
+end
+deactivate CH
+return ok
+
+UI -> GC ++ : endTurn()
+loop for each customer awaiting service
+  GC -> C ++ : applyWaitingPenalty()
+  note right of C : VIP loses 5 per turn\nwhile waiting for food
+  return
+end
+return events
+
+== Turn 6: the Waiter serves O2 (READY -> SERVED) ==
+
+UI -> GC ++ : waiterServe("O2")
+GC -> W ++ : serve(restaurant, "O2", 6)
+W -> R ++ : findOrder("O2")
+return o2
+alt status != READY
+  W --> GC : fail("O2 is not READY ...")
+else not o2.isServableOn(6)
+  W --> GC : fail("only became READY this turn ...")
+else READY since an earlier turn
+  W -> O ++ : markServed(6)
+  note right of O : status = SERVED,\nservedTurn = 6
+  return
+  W -> C ++ : receiveServedOrder(6)
+  C -> C : onServed(6)
+  note right of C
+    state = EATING. onServed() is the hook
+    the Critic overrides; a VIP keeps the
+    default, which has no reaction.
+  end note
+  return null (no reaction)
+  W -> W : markActed()
+  W --> GC : ok("Waiter serves O2 ... SERVED.")
+end
+deactivate W
+return ok
+
+== Turn 7: C2 finishes eating ==
+
+UI -> GC ++ : endTurn()
+loop for each customer
+  GC -> C ++ : finishEatingIfDone(7)
+  note right of C : EATING and servedTurn 6 < 7:\nstate = READY_TO_PAY, readyToPayTurn = 7
+  return true
+end
+return "C2 finishes eating: READY_TO_PAY"
+
+== Turn 8: payment ==
+
+UI -> GC ++ : endTurn()
+GC -> CA ++ : collectPayment(restaurant, 8)
+CA -> CA : payableCustomers(restaurant, 8)
+CA -> C ++ : canPayOn(8)
+return true (READY_TO_PAY and 7 < 8)
+alt nobody payable
+  CA --> GC : fail("nobody is ready to pay")
+else oldest payable customer is c2
+  CA -> R ++ : recordPayment(c2)
+  note right of R : revenue += 1555
+  R -> O ++ : markPaid()
+  return
+  R -> C ++ : markPaid()
+  note right of C : satisfaction 95 recorded,\nstate = PAID
+  return
+  R -> R : table.release()  (T2 freed)
+  return
+  CA -> CA : markActed()
+  CA --> GC : ok("Cashier collects $15.55 from C2 ...")
+end
+deactivate CA
+return events
+
+end
+
+== After turn 18: the result check ==
+
+UI -> GC ++ : getResult()
+create GR
+GC -> GR : evaluate(config, paid 4, revenue 7285, satisfaction sum)
+return result
+UI -> GR ++ : isVictory()
+GR -> GR : isPaidCountMet()  [4 >= 4]
+GR -> GR : isRevenueMet()  [$72.85 >= $45.00]
+GR -> GR : isSatisfactionMet()  [82.8 >= 60]
+return true
+UI -> Manager : "RESULT: VICTORY"
+@enduml
