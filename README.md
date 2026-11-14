@@ -79,3 +79,23 @@ Full list of new, changed and deleted files per stage, with reasons: [TRANSITION
 
 - [Design discussion](Design_Discussion_SCMC_Group2.pdf)
 - [GitHub evidence](GitHub_Evidence_SCMC_Group2.pdf)
+
+## Video
+
+Link: https://youtu.be/GP7yLUpyXyc (16:38)
+
+## Video timestamps
+
+| # | Segment | Timestamp |
+|---|---|---|
+| – | Intro | 00:00 – 00:44 |
+| 1 | Launch from the submitted project | 00:45 – 01:53 |
+| 2 | Meaningful choices with constrained staff | 01:54 – 03:13 |
+| 3 | READY → SERVED → payment | 03:14 – 04:27 |
+| 4 | VIP and Critic behaviour | 04:28 – 06:07 |
+| 5 | Stage 3 features (Happy Hour, Host, combo meals) | 06:08 – 08:01 |
+| – | Stage 4 Custom mode | 08:02 – 09:55 |
+| 6 | Victory | 09:56 – 10:58 |
+| 6 | Defeat | 10:59 – 12:05 |
+| 7 | Stage comparisons and diagrams | 12:06 – 15:41 |
+| – | SOLID principles | 15:42 – 16:38 |
