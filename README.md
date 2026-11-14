@@ -74,3 +74,8 @@ Full list of new, changed and deleted files per stage, with reasons: [TRANSITION
 - [Stage 4 class diagram](docs/diagrams/stage-4-class.png)
 - [Sequence diagram Part 1: Take an order (Stage 3)](docs/diagrams/sequence-part1-take-an-order.png)
 - [Sequence diagram Part 2: Cook, serve, eat, pay and result (Stage 3)](docs/diagrams/sequence-part2-cook-serve-pay.png)
+
+## Report documents
+
+- [Design discussion](Design_Discussion_SCMC_Group2.pdf)
+- [GitHub evidence](GitHub_Evidence_SCMC_Group2.pdf)
