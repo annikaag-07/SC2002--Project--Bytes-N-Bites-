@@ -46,3 +46,18 @@ From Stage 2, who arrives on each turn (1, 4, 7, 10, 13, 16) is random but alway
 | `restaurant-rush/` | The original Java game (SC2002 project) whose rules the web game uses. It also runs on its own in the terminal: `cd restaurant-rush && ./build.sh && ./run.sh` |
 
 To change the front end, you also need Node.js 20+: run `cd restaurant-rush-app && ./build.sh`, then `./start.sh`. Developer details are in `restaurant-rush-app/README.md`.
+
+## Stages
+
+Each stage is a tag you can download and run with `./play.sh` or `play.bat`.
+
+| Stage | Code | Changes from previous stage |
+|---|---|---|
+| 1 | [stage-1](https://github.com/annikaag-07/SC2002--Project--Bytes-N-Bites-/tree/stage-1) | Base game: Regular customers, Waiter, Chef, Cashier |
+| 2 | [stage-2](https://github.com/annikaag-07/SC2002--Project--Bytes-N-Bites-/tree/stage-2) | [Compare 1 → 2](https://github.com/annikaag-07/SC2002--Project--Bytes-N-Bites-/compare/stage-1...stage-2): VIP and Critic customers via polymorphism |
+| 3 | [stage-3](https://github.com/annikaag-07/SC2002--Project--Bytes-N-Bites-/tree/stage-3) | [Compare 2 → 3](https://github.com/annikaag-07/SC2002--Project--Bytes-N-Bites-/compare/stage-2...stage-3): Host, combo meals, Happy Hour |
+| 4 | [stage-4](https://github.com/annikaag-07/SC2002--Project--Bytes-N-Bites-/tree/stage-4) | [Compare 3 → 4](https://github.com/annikaag-07/SC2002--Project--Bytes-N-Bites-/compare/stage-3...stage-4): Custom mode, web edition |
+
+## AI history
+
+No group member used AI tools. See [AI-DECLARATION.md](AI-DECLARATION.md).
