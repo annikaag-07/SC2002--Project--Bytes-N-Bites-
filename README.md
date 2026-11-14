@@ -61,4 +61,7 @@ Each stage is a tag you can download and run with `./play.sh` or `play.bat`.
 ## AI history
 
 No group member used AI tools. See [AI-DECLARATION.md](AI-DECLARATION.md).
+
+## Transitions
+
 Full list of new, changed and deleted files per stage, with reasons: [TRANSITIONS.md](restaurant-rush/docs/TRANSITIONS.md)
