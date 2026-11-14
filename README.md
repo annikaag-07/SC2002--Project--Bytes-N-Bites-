@@ -65,3 +65,10 @@ No group member used AI tools. See [AI-DECLARATION.md](AI-DECLARATION.md).
 ## Transitions
 
 Full list of new, changed and deleted files per stage, with reasons: [TRANSITIONS.md](restaurant-rush/docs/TRANSITIONS.md)
+
+## UML diagrams
+
+- [Stage 1 class diagram](docs/diagrams/stage-1-class.png)
+- [Stage 2 class diagram](docs/diagrams/stage-2-class.png)
+- [Stage 3 class diagram](docs/diagrams/stage-3-class.png)
+- [Stage 4 class diagram](docs/diagrams/stage-4-class.png)

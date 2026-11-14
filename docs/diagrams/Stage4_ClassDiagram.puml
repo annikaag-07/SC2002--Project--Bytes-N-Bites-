@@ -1,0 +1,659 @@
+@startuml
+title <b>Bytes N Bites: Stage 4 class diagram</b>\n<size:12>Stage 3 + Customer hooks; web edition server with Custom mode customers</size>
+set separator none
+skinparam classAttributeIconSize 0
+skinparam linetype polyline
+skinparam shadowing false
+skinparam nodesep 45
+skinparam ranksep 70
+skinparam defaultFontName Arial
+skinparam classFontStyle bold
+skinparam ArrowColor #444444
+skinparam classBorderColor #555555
+skinparam classBackgroundColor #FFFFFF
+skinparam packageBorderColor #333333
+skinparam noteBackgroundColor #FFF8DC
+skinparam noteBorderColor #C9B458
+skinparam packageStyle rectangle
+hide empty members
+
+legend top right
+|<#C8E6C9>  | New in Stage 4 |
+|<#FFF59D>  | Code changed in Stage 4 |
+|<#FFFFFF>  | Unchanged since Stage 3 (comment-only edits not marked) |
+Scope: game engine (restaurant-rush) and web edition server (restaurant-rush-app).
+Engine classes unchanged since Stage 3 are shown by name only;
+their members are exactly as in the Stage 3 diagram.
+Visibility: + public  - private  # protected  ~ package
+{leaf} = final method.  "accessors" lists the simple getters;
+each returns the attribute of the same name.
+endlegend
+
+class "Main" as Main  {
+  {static} -DEFAULT_SEED : long
+  --
+  -«create» Main()
+  {static} +main(args : String[]) : void
+  {static} -usage(problem : String) : void
+}
+package "rush.web <<Web edition server>>" {
+  class "ArrivalPlan" as ArrivalPlan  #FFF59D {
+    {static} ~ARRIVAL_TURNS : int[]
+    {static} ~WEIGHT_REGULAR : int
+    {static} ~WEIGHT_VIP : int
+    {static} ~WEIGHT_CRITIC : int
+    {static} ~MIN_VIPS : int
+    {static} ~MIN_CRITICS : int
+    {static} ~MIN_REGULARS : int
+    {static} ~IMPATIENT_SLOT : int
+    --
+    -«create» ArrivalPlan()
+    {static} ~scheduleRandom(gameSeed : long) : Random
+    {static} ~kinds(seed : long, mode : ModeFeatures) : List<Kind>
+    {static} -repair(kinds : List<Kind>, rng : Random) : void
+    {static} -replaceOne(kinds : List<Kind>, rng : Random, into : Kind, a : Kind, minA : int, b : Kind, minB : int) : void
+    {static} ~count(kinds : List<Kind>, kind : Kind) : int
+  }
+  enum "ArrivalPlan.Kind" as ArrivalPlan_Kind  #FFF59D {
+    REGULAR
+    VIP
+    CRITIC
+    IMPATIENT
+  }
+  class "CustomerSubtypes" as CustomerSubtypes  #C8E6C9 {
+    {static} ~NORMAL_CUSTOMER_COUNT : int
+    {static} ~SPECIALISED_COUNT_ODDS : int[]
+    {static} ~GRUMPY_START_MIN : int
+    {static} ~GRUMPY_START_MAX : int
+    {static} ~GRUMPY_GAIN_MULTIPLIER : int
+    {static} ~CHATTY_EATING_TURNS : int
+    {static} ~TIP_MAX_PERCENT : int
+    {static} ~TIP_MIN_SATISFACTION : int
+    {static} ~TIPS_COUNT_TOWARDS_REVENUE_TARGET : boolean
+    --
+    -«create» CustomerSubtypes()
+    {static} ~subtypeRandom(gameSeed : long) : Random
+    {static} ~tipRandom(gameSeed : long) : Random
+    {static} ~roll(normalCount : int, rng : Random) : List<SubType>
+    {static} -pickCount(rng : Random) : int
+  }
+  class "CustomerSubtypes.ChattyCustomer" as CustomerSubtypes_ChattyCustomer  #C8E6C9 {
+    --
+    ~«create» ChattyCustomer(id : String, arrivalIndex : int, arrivalTurn : int, gameSeed : long)
+    #eatingTurns() : int
+  }
+  class "CustomerSubtypes.GrumpyCustomer" as CustomerSubtypes_GrumpyCustomer  #C8E6C9 {
+    --
+    ~«create» GrumpyCustomer(id : String, arrivalIndex : int, arrivalTurn : int, gameSeed : long, startSatisfaction : int)
+    #scalePositiveGain(points : int) : int
+  }
+  class "CustomerSubtypes.PickyCustomer" as CustomerSubtypes_PickyCustomer  #C8E6C9 {
+    -sentBack : boolean
+    --
+    ~«create» PickyCustomer(id : String, arrivalIndex : int, arrivalTurn : int, gameSeed : long)
+    #rejectsServedFood(turn : int) : boolean
+  }
+  enum "CustomerSubtypes.SubType" as CustomerSubtypes_SubType  #C8E6C9 {
+    NORMAL
+    PICKY
+    CHATTY
+    GRUMPY
+    --
+    ~id() : String
+  }
+  class "GameSession" as GameSession  #FFF59D {
+    -seed : long
+    -mode : ModeFeatures
+    -day : int
+    -schedule : ArrivalSchedule
+    -game : GameController
+    -actionLog : List<String>
+    -happyHourAnswered : boolean
+    -over : boolean
+    -lastTurnEvents : List<GameEvent>
+    -turnStartEvents : List<GameEvent>
+    -subTypes : Map<String, SubType>
+    -tipRng : Random
+    -settled : Set<String>
+    -tips : List<Tip>
+    -happyHourTurn : int
+    --
+    -«create» GameSession(seed : long, mode : ModeFeatures, day : int, turns : int[], kinds : List<Kind>, menu : Menu)
+    {static} ~start(seed : long, mode : ModeFeatures, day : int) : GameSession
+    {static} ~startWith(seed : long, mode : ModeFeatures, turns : int[], kinds : List<Kind>, menu : Menu) : GameSession
+    {static} -begin(session : GameSession) : GameSession
+    {static} ~menuFor(mode : ModeFeatures) : Menu
+    {static} ~replay(seed : long, mode : ModeFeatures, day : int, log : List<String>) : GameSession
+    -buildSchedule(seed : long, turns : int[], kinds : List<Kind>) : ArrivalSchedule
+    -collectTips() : void
+    ~phase() : Phase
+    ~perform(type : String, customer : String, table : String, order : String) : ActionResult
+    ~next() : ActionResult
+    {static} -phaseOf(type : String) : Phase
+    {static} ~roleName(phase : Phase) : String
+    ~upcomingArrivals() : List<Customer>
+    ~game() : GameController
+    ~seed() : long
+    ~mode() : ModeFeatures
+    ~isOver() : boolean
+    ~lastTurnEvents() : List<GameEvent>
+    ~turnStartEvents() : List<GameEvent>
+    ~day() : int
+    ~subTypeOf(customerId : String) : SubType
+    ~subTypes() : Map<String, SubType>
+    ~tips() : List<Tip>
+    ~tipsCents() : long
+    ~actionLog() : List<String>
+  }
+  enum "GameSession.Phase" as GameSession_Phase  {
+    HAPPY_HOUR
+    HOST
+    WAITER
+    CHEF
+    SUMMARY
+    OVER
+  }
+  class "GameSession.Tip" as GameSession_Tip <<record>> #C8E6C9 {
+    turn : int
+    customerId : String
+    cents : long
+    --
+    ~text() : String
+  }
+  class "ImpatientCustomer" as ImpatientCustomer  #C8E6C9 {
+    {static} +WALK_OUT_AT : int
+    {static} -LOSS : int
+    --
+    +«create» ImpatientCustomer(id : String, arrivalIndex : int, arrivalTurn : int, gameSeed : long)
+    +typeLabel() : String
+    #satisfactionLossPerTurn() : int
+  }
+  class "Json" as Json  {
+    --
+    -«create» Json()
+    {static} ~str(value : String) : String
+    {static} ~arr(encoded : List<String>) : String
+  }
+  class "Json.Obj" as Json_Obj  {
+    -out : StringBuilder
+    --
+    -key(key : String) : Obj
+    ~put(key : String, value : String) : Obj
+    ~put(key : String, value : long) : Obj
+    ~put(key : String, value : boolean) : Obj
+    ~raw(key : String, json : String) : Obj
+    +toString() : String
+  }
+  enum "ModeFeatures" as ModeFeatures  #FFF59D {
+    STAGE1
+    STAGE2
+    STAGE3
+    CUSTOM
+    CLASSIC
+    --
+    -id : String
+    -label : String
+    -vipAndCritic : boolean
+    -host : boolean
+    -combos : boolean
+    -happyHour : boolean
+    -tips : boolean
+    -subTypes : boolean
+    -impatient : boolean
+    -randomArrivals : boolean
+    ~«create» ModeFeatures(id : String, label : String, vipAndCritic : boolean, host : boolean, combos : boolean, happyHour : boolean, tips : boolean, subTypes : boolean, impatient : boolean, randomArrivals : boolean)
+    {static} ~fromId(id : String) : ModeFeatures
+    {static} ~isKnown(id : String) : boolean
+    {static} ~labelFor(id : String) : String
+    {static} -ids() : List<String>
+    ~id() : String
+    ~label() : String
+    ~vipAndCritic() : boolean
+    ~host() : boolean
+    ~combos() : boolean
+    ~happyHour() : boolean
+    ~tips() : boolean
+    ~subTypes() : boolean
+    ~impatient() : boolean
+    ~randomArrivals() : boolean
+  }
+  class "ScoreBoard" as ScoreBoard  {
+    {static} -MAX_ENTRIES : int
+    -file : Path
+    --
+    ~«create» ScoreBoard(file : Path)
+    ~load() : List<Entry>
+    ~record(seed : long, day : int, mode : String, result : GameResult) : void
+    {static} ~stars(result : GameResult) : int
+    {static} -averageValue(text : String) : double
+  }
+  class "ScoreBoard.Entry" as ScoreBoard_Entry <<record>> {
+    date : String
+    day : int
+    mode : String
+    victory : boolean
+    stars : int
+    paid : int
+    revenueCents : long
+    average : String
+    seed : String
+    --
+    ~toJson() : String
+  }
+  class "StateJson" as StateJson  #FFF59D {
+    {static} -WAIT_HINT : String
+    --
+    -«create» StateJson()
+    {static} ~of(session : GameSession) : String
+    {static} -features(mode : ModeFeatures) : String
+    {static} -menu(g : GameController) : String
+    {static} -withTips(session : GameSession, events : List<GameEvent>) : List<GameEvent>
+    {static} -logWithTips(session : GameSession) : List<GameEvent>
+    {static} -tipList(session : GameSession) : String
+    {static} ~events(events : List<GameEvent>) : String
+    {static} -ids(customers : List<Customer>) : String
+    {static} -tables(g : GameController) : String
+    {static} -customers(session : GameSession) : String
+    {static} -orders(g : GameController) : String
+    {static} -components(item : MenuItem) : String
+    {static} -nextArrival(session : GameSession) : String
+    {static} -result(r : GameResult) : String
+    {static} -decision(session : GameSession) : String
+    {static} -seatChoice(g : GameController, type : String) : String
+    {static} -takeOrderChoice(g : GameController) : String
+    {static} -serveChoice(g : GameController) : String
+    {static} -cookChoice(g : GameController) : String
+    {static} -tableStatus(g : GameController, t : Table) : String
+    {static} -describe(c : Customer) : String
+    {static} -choice(type : String, label : String, disabledReason : String, hint : String, steps : List<String>) : String
+    {static} -step(param : String, prompt : String, options : List<String>) : String
+    {static} -option(value : String, label : String, detail : String, disabledReason : String) : String
+    {static} -tableName(t : Table) : String
+  }
+  class "WebServer" as WebServer  {
+    -saveFile : Path
+    -dayFile : Path
+    -webRoot : Path
+    -scores : ScoreBoard
+    -session : GameSession
+    --
+    -«create» WebServer(dataDir : Path, webRoot : Path)
+    {static} +main(args : String[]) : void
+    -handleApi(ex : HttpExchange) : void
+    -afterChange() : void
+    -save() : void
+    -load() : GameSession
+    -hasUsableSave() : boolean
+    -nextDay() : int
+    -peekDay() : int
+    {static} -requirePost(post : boolean) : void
+    {static} -error(message : String) : String
+    {static} -query(ex : HttpExchange) : Map<String, String>
+    -handleStatic(ex : HttpExchange) : void
+    {static} -contentType(file : Path) : String
+    {static} -send(ex : HttpExchange, status : int, json : String) : void
+    {static} -send(ex : HttpExchange, status : int, type : String, body : String) : void
+    {static} -send(ex : HttpExchange, status : int, type : String, body : byte[]) : void
+  }
+}
+
+package "rush.boundary <<Boundary>>" {
+  class "ConsoleUI" as ConsoleUI  {
+    .. unchanged since Stage 3 ..
+  }
+  class "InputReader" as InputReader  {
+    .. unchanged since Stage 3 ..
+  }
+}
+
+package "rush.control <<Control>>" {
+  class "ArrivalSchedule" as ArrivalSchedule  {
+    .. unchanged since Stage 3 ..
+  }
+  class "ArrivalSchedule.Builder" as ArrivalSchedule_Builder  {
+    .. unchanged since Stage 3 ..
+  }
+  interface "ArrivalSchedule.CustomerFactory" as ArrivalSchedule_CustomerFactory  {
+    .. unchanged since Stage 3 ..
+  }
+  class "BillCalculator" as BillCalculator  {
+    .. unchanged since Stage 3 ..
+  }
+  class "GameConfig" as GameConfig  #FFF59D {
+    -totalTurns : int
+    -tableCount : int
+    -seed : long
+    -menu : Menu
+    -minPaidCustomers : int
+    -minRevenueCents : long
+    -minAverageSatisfaction : int
+    -chargeAtTurnStart : boolean
+    --
+    +«create» GameConfig(totalTurns : int, tableCount : int, seed : long, menu : Menu, minPaidCustomers : int, minRevenueCents : long, minAverageSatisfaction : int)
+    -«create» GameConfig(totalTurns : int, tableCount : int, seed : long, menu : Menu, minPaidCustomers : int, minRevenueCents : long, minAverageSatisfaction : int, chargeAtTurnStart : boolean)
+    {static} +base(seed : long) : GameConfig
+    +withMenu(otherMenu : Menu) : GameConfig
+    +withChargeAtTurnStart(atTurnStart : boolean) : GameConfig
+    +isChargeAtTurnStart() : boolean
+    .. accessors ..
+    +getTotalTurns(), getTableCount(), getSeed()
+    +getMenu(), getMinPaidCustomers(), getMinRevenueCents()
+    +getMinAverageSatisfaction()
+  }
+  class "GameController" as GameController  #FFF59D {
+    -config : GameConfig
+    -schedule : ArrivalSchedule
+    -restaurant : Restaurant
+    -happyHour : HappyHourPolicy
+    -billCalculator : BillCalculator
+    -host : Host
+    -waiter : Waiter
+    -chef : Chef
+    -cashier : Cashier
+    -eventLog : List<GameEvent>
+    -currentTurn : int
+    -turnInProgress : boolean
+    --
+    +«create» GameController(config : GameConfig, schedule : ArrivalSchedule)
+    +beginTurn() : List<GameEvent>
+    +activateHappyHour() : ActionResult
+    +hostSeat(customerId : String, tableId : String) : ActionResult
+    +hostWait() : ActionResult
+    +waiterSeat(customerId : String, tableId : String) : ActionResult
+    +waiterTakeOrder(customerId : String) : ActionResult
+    +waiterServe(orderId : String) : ActionResult
+    +waiterWait() : ActionResult
+    +chefAdvance(orderId : String) : ActionResult
+    +chefWait() : ActionResult
+    +endTurn() : List<GameEvent>
+    +isGameOver() : boolean
+    +isHappyHourAvailable() : boolean
+    +hasHostActed() : boolean
+    +hasWaiterActed() : boolean
+    +hasChefActed() : boolean
+    -checkHostMayAct() : ActionResult
+    -checkWaiterMayAct() : ActionResult
+    -checkChefMayAct() : ActionResult
+    -record(result : ActionResult) : ActionResult
+    -event(text : String) : GameEvent
+    .. accessors ..
+    +getResult(), getCurrentTurn(), getTotalTurns()
+    +getSeed(), getMenu(), getRevenueCents()
+    +getAverageSatisfactionText(), getServedCount(), getDepartureCount()
+    +getPaidCount(), getQueue(), getTables()
+    +getCustomers(), getOrders(), getFreeTables()
+    +getCustomersAwaitingOrder(), getServableOrders(), getPreparableOrders()
+    +getNextPayingCustomer(), getHappyHourRemainingTurns(), getEventLog()
+  }
+  class "GameEvent" as GameEvent  {
+    .. unchanged since Stage 3 ..
+  }
+  class "GameResult" as GameResult  {
+    .. unchanged since Stage 3 ..
+  }
+  class "HappyHourPolicy" as HappyHourPolicy  {
+    .. unchanged since Stage 3 ..
+  }
+}
+
+package "rush.entity <<Entity>>" {
+  class "ActionResult" as ActionResult <<value>> {
+    .. unchanged since Stage 3 ..
+  }
+  class "Cashier" as Cashier  {
+    .. unchanged since Stage 3 ..
+  }
+  class "Chef" as Chef  {
+    .. unchanged since Stage 3 ..
+  }
+  class "ComboMeal" as ComboMeal  {
+    .. unchanged since Stage 3 ..
+  }
+  class "CriticCustomer" as CriticCustomer  {
+    .. unchanged since Stage 3 ..
+  }
+  abstract class "Customer" as Customer  #FFF59D {
+    {static} +MAX_SATISFACTION : int
+    -id : String
+    -arrivalIndex : int
+    -arrivalTurn : int
+    -choiceRng : Random
+    -satisfaction : int
+    -state : CustomerState
+    -table : Table
+    -order : Order
+    -readyToPayTurn : int
+    -recordedSatisfaction : int
+    --
+    #«create» Customer(id : String, arrivalIndex : int, arrivalTurn : int, gameSeed : long)
+    {static} +choiceSeed(gameSeed : long, arrivalIndex : int) : long
+    {abstract} +typeLabel() : String
+    {abstract} #satisfactionLossPerTurn() : int
+    +applyCustomerPricing(priceCents : long) : long
+    #onServed(turn : int) : String
+    #scalePositiveGain(points : int) : int
+    #eatingTurns() : int
+    #rejectsServedFood(turn : int) : boolean
+    #changeSatisfaction(delta : int) : void {leaf}
+    +applyWaitingPenalty() : void {leaf}
+    +recoverWhileWaiting(points : int) : boolean {leaf}
+    +hasRunOutOfPatience() : boolean {leaf}
+    +finishEatingIfDone(turn : int) : boolean {leaf}
+    +canPayOn(turn : int) : boolean {leaf}
+    ~chooseFrom(menu : Menu) : MenuItem
+    ~seatAt(assigned : Table) : void
+    ~attachOrder(placed : Order) : void
+    ~receiveServedOrder(turn : int) : String {leaf}
+    ~markPaid() : void
+    ~leave() : void
+    +toString() : String
+    .. accessors ..
+    +getId(), getArrivalIndex(), getArrivalTurn()
+    +getSatisfaction(), getState(), getTable()
+    +getOrder(), getReadyToPayTurn(), getRecordedSatisfaction()
+  }
+  enum "CustomerState" as CustomerState  {
+    .. unchanged since Stage 3 ..
+  }
+  class "Host" as Host  {
+    .. unchanged since Stage 3 ..
+  }
+  class "Menu" as Menu  {
+    .. unchanged since Stage 3 ..
+  }
+  class "MenuItem" as MenuItem  {
+    .. unchanged since Stage 3 ..
+  }
+  class "Money" as Money <<utility>> {
+    .. unchanged since Stage 3 ..
+  }
+  class "Order" as Order  #FFF59D {
+    -id : String
+    -customer : Customer
+    -item : MenuItem
+    -takenTurn : int
+    -status : OrderStatus
+    -unitsDone : int
+    -lockedPriceCents : long
+    -readyTurn : int
+    -servedTurn : int
+    --
+    ~«create» Order(id : String, customer : Customer, item : MenuItem, takenTurn : int)
+    +lockPrice(priceCents : long) : void
+    +isPriceLocked() : boolean
+    +isServableOn(turn : int) : boolean
+    ~advanceUnit(turn : int) : boolean
+    ~markServed(turn : int) : void
+    ~sendBack(turn : int) : void
+    ~markPaid() : void
+    ~cancel() : void
+    +progress() : String
+    +toString() : String
+    .. accessors ..
+    +getId(), getCustomer(), getItem()
+    +getTakenTurn(), getStatus(), getUnitsDone()
+    +getLockedPriceCents(), getReadyTurn(), getServedTurn()
+  }
+  enum "OrderStatus" as OrderStatus  {
+    .. unchanged since Stage 3 ..
+  }
+  class "RegularCustomer" as RegularCustomer  {
+    .. unchanged since Stage 3 ..
+  }
+  class "Restaurant" as Restaurant  {
+    .. unchanged since Stage 3 ..
+  }
+  abstract class "Staff" as Staff  {
+    .. unchanged since Stage 3 ..
+  }
+  class "Table" as Table  {
+    .. unchanged since Stage 3 ..
+  }
+  class "VIPCustomer" as VIPCustomer  {
+    .. unchanged since Stage 3 ..
+  }
+  class "Waiter" as Waiter  {
+    .. unchanged since Stage 3 ..
+  }
+}
+
+Main ..> ConsoleUI : creates
+Main ..> GameController : creates
+ConsoleUI *-- "1\ninput" InputReader
+ConsoleUI --> "1\ngame" GameController
+GameController ..> GameResult : creates
+GameResult --> "1\nconfig" GameConfig
+GameController --> "1\nconfig" GameConfig
+GameController --> "1\nschedule" ArrivalSchedule
+GameController *-- "*\neventLog" GameEvent
+GameController *-- "1\nbillCalculator" BillCalculator
+GameController *-- "1\nhappyHour" HappyHourPolicy
+BillCalculator --> "1\nhappyHour" HappyHourPolicy
+GameController *-- "1\nrestaurant" Restaurant
+GameController *-- "1\nhost" Host
+GameController *-- "1\nwaiter" Waiter
+GameController *-- "1\nchef" Chef
+GameController *-- "1\ncashier" Cashier
+BillCalculator ..> Order : locks price of
+GameConfig --> "1\nmenu" Menu
+ArrivalSchedule o-- "*\ncustomers" Customer
+ArrivalSchedule +-- ArrivalSchedule_Builder
+ArrivalSchedule +-- ArrivalSchedule_CustomerFactory
+ArrivalSchedule_Builder ..> ArrivalSchedule_CustomerFactory : uses
+ArrivalSchedule_CustomerFactory ..> Customer : creates
+Staff <|-- Waiter
+Staff <|-- Chef
+Staff <|-- Cashier
+Staff <|-- Host
+Staff ..> ActionResult : returns
+Host ..> Restaurant : acts on
+Waiter ..> Restaurant : acts on
+Chef ..> Restaurant : acts on
+Cashier ..> Restaurant : acts on
+Restaurant *-- "*\ntables" Table
+Restaurant o-- "*\nqueue" Customer
+Restaurant o-- "*\ncustomers" Customer
+Restaurant *-- "*\norders" Order
+Customer "0..1\noccupant" -- "0..1\ntable" Table
+Customer "1\ncustomer" -- "0..1\norder" Order
+Customer --> "1\nstate" CustomerState
+Order --> "1\nitem" MenuItem
+Order --> "1\nstatus" OrderStatus
+Menu o-- "1..*\nofferings" MenuItem
+Customer <|-- RegularCustomer
+Customer <|-- VIPCustomer
+Customer <|-- CriticCustomer
+MenuItem <|-- ComboMeal
+ComboMeal --> "2\nfirst, second" MenuItem
+WebServer --> "0..1\nsession" GameSession
+WebServer *-- "1\nscores" ScoreBoard
+WebServer ..> StateJson : uses
+ScoreBoard +-- ScoreBoard_Entry
+ScoreBoard ..> GameResult : records
+StateJson ..> GameSession : reads
+StateJson ..> Json : uses
+Json +-- Json_Obj
+GameSession +-- GameSession_Phase
+GameSession +-- GameSession_Tip
+GameSession *-- "*\ntips" GameSession_Tip
+GameSession --> "1\nmode" ModeFeatures
+GameSession *-- "1\ngame" GameController
+GameSession --> "1\nschedule" ArrivalSchedule
+GameSession ..> ArrivalPlan : uses
+ArrivalPlan +-- ArrivalPlan_Kind
+ArrivalPlan ..> ModeFeatures : uses
+GameSession ..> CustomerSubtypes : uses
+GameSession ..> ImpatientCustomer : creates
+CustomerSubtypes +-- CustomerSubtypes_SubType
+CustomerSubtypes +-- CustomerSubtypes_PickyCustomer
+CustomerSubtypes +-- CustomerSubtypes_ChattyCustomer
+CustomerSubtypes +-- CustomerSubtypes_GrumpyCustomer
+RegularCustomer <|-- CustomerSubtypes_PickyCustomer
+RegularCustomer <|-- CustomerSubtypes_ChattyCustomer
+RegularCustomer <|-- CustomerSubtypes_GrumpyCustomer
+Customer <|-- ImpatientCustomer
+
+note top of Staff
+**Inheritance**
+The one-task-per-turn rule is written once in
+Staff's final ({leaf}) methods: startTurn, waitTurn,
+markActed. Subclasses add only their own actions.
+end note
+note right of Customer
+**Abstraction / Template Method**
+abstract typeLabel() and satisfactionLossPerTurn().
+The final ({leaf}) applyWaitingPenalty() calls the
+subclass's satisfactionLossPerTurn().
+end note
+note bottom of Order
+**Encapsulation**
+lockPrice() throws if the price is already locked.
+State changes (advanceUnit, markServed, markPaid)
+are package-private (~).
+end note
+note bottom of VIPCustomer
+**Polymorphism**
+VIPCustomer overrides applyCustomerPricing() (pays 90%).
+CriticCustomer overrides onServed() (+10 if served within
+2 turns of ordering, otherwise -10). Control and Boundary
+classes never test a customer's type.
+end note
+note bottom of HappyHourPolicy
+**Single responsibility**
+All Happy Hour rules in one class: availability,
+2-turn duration, 20% off, +15 recovery.
+BillCalculator uses it.
+end note
+note bottom of ComboMeal
+**Inheritance + aggregation**
+A ComboMeal is a MenuItem and holds two base
+MenuItems. Overrides describe(); price is 90%
+of the two dishes.
+end note
+note bottom of ImpatientCustomer
+**Open/Closed**
+Stage 4 added hooks to Customer (eatingTurns,
+rejectsServedFood, scalePositiveGain) whose defaults
+keep the old behaviour; Picky, Chatty, Grumpy and
+Impatient only override hooks.
+end note
+note bottom of Money
+**Used by** (dependencies not drawn,
+to keep the diagram readable):
+GameSession, StateJson, ConsoleUI
+GameController, HappyHourPolicy, Cashier
+ComboMeal, MenuItem, VIPCustomer
+end note
+note bottom of ActionResult
+**Used by** (dependencies not drawn,
+to keep the diagram readable):
+GameSession, WebServer, ConsoleUI
+GameController, HappyHourPolicy, Cashier
+Chef, Host, Restaurant
+Staff, Waiter
+end note
+ConsoleUI -[hidden]down- GameController
+ModeFeatures -[hidden]down- ConsoleUI
+CustomerSubtypes_ChattyCustomer -[hidden]down- GameController
+ArrivalPlan_Kind -[hidden]down- Main
+@enduml

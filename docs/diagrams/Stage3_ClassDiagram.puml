@@ -1,0 +1,546 @@
+@startuml
+title <b>Bytes N Bites: Stage 3 class diagram</b>\n<size:12>Stage 2 + Host, combo meals, Happy Hour</size>
+set separator none
+skinparam classAttributeIconSize 0
+skinparam linetype polyline
+skinparam shadowing false
+skinparam nodesep 45
+skinparam ranksep 70
+skinparam defaultFontName Arial
+skinparam classFontStyle bold
+skinparam ArrowColor #444444
+skinparam classBorderColor #555555
+skinparam classBackgroundColor #FFFFFF
+skinparam packageBorderColor #333333
+skinparam noteBackgroundColor #FFF8DC
+skinparam noteBorderColor #C9B458
+skinparam packageStyle rectangle
+hide empty members
+
+legend top right
+|<#C8E6C9>  | New in Stage 3 |
+|<#FFF59D>  | Code changed in Stage 3 |
+|<#FFFFFF>  | Unchanged since Stage 2 (comment-only edits not marked) |
+Scope: game engine (restaurant-rush). The web edition
+server (rush.web) is drawn in the Stage 4 diagram.
+Visibility: + public  - private  # protected  ~ package
+{leaf} = final method.  "accessors" lists the simple getters;
+each returns the attribute of the same name.
+endlegend
+
+class "Main" as Main  {
+  {static} -DEFAULT_SEED : long
+  --
+  -«create» Main()
+  {static} +main(args : String[]) : void
+  {static} -usage(problem : String) : void
+}
+package "rush.boundary <<Boundary>>" {
+  class "ConsoleUI" as ConsoleUI  #FFF59D {
+    {static} -RULE : String
+    -game : GameController
+    -input : InputReader
+    -out : PrintStream
+    --
+    +«create» ConsoleUI(game : GameController, in : InputStream, out : PrintStream)
+    +run() : void
+    -printBanner() : void
+    -printStartOfTurn() : void
+    -printEndOfTurn() : void
+    -printResult(result : GameResult) : void
+    -printEvents(events : List<GameEvent>) : void
+    -happyHourStatus() : String
+    -promptHappyHour() : void
+    -promptHost() : void
+    -promptWaiter() : void
+    -promptChef() : void
+    -report(result : ActionResult) : boolean
+    -readId(prompt : String, prefix : String) : String
+    {static} -joinCustomers(customers : List<Customer>) : String
+    {static} -joinTables(tables : List<Table>) : String
+    {static} -joinOrders(orders : List<Order>) : String
+    {static} -met(met : boolean) : String
+  }
+  class "InputReader" as InputReader  {
+    -reader : BufferedReader
+    -out : PrintStream
+    -echo : boolean
+    -ended : boolean
+    --
+    ~«create» InputReader(in : InputStream, out : PrintStream)
+    ~readLine(prompt : String, defaultOnEnd : String) : String
+    -nextRawLine() : String
+    {static} -isInteractiveTerminal() : boolean
+  }
+}
+
+package "rush.control <<Control>>" {
+  class "ArrivalSchedule" as ArrivalSchedule  {
+    -customers : List<Customer>
+    --
+    -«create» ArrivalSchedule(customers : List<Customer>)
+    {static} +base(seed : long) : ArrivalSchedule
+    {static} +regulars(seed : long, turns : int...) : ArrivalSchedule
+    {static} +builder(seed : long) : Builder
+    +arrivalsOn(turn : int) : List<Customer>
+    .. accessors ..
+    +getCustomers()
+  }
+  class "ArrivalSchedule.Builder" as ArrivalSchedule_Builder  {
+    -seed : long
+    -customers : List<Customer>
+    -lastTurn : int
+    --
+    -«create» Builder(seed : long)
+    +add(turn : int, factory : CustomerFactory) : Builder
+    +build() : ArrivalSchedule
+  }
+  interface "ArrivalSchedule.CustomerFactory" as ArrivalSchedule_CustomerFactory  {
+    --
+    {abstract} +create(id : String, arrivalIndex : int, arrivalTurn : int, gameSeed : long) : Customer
+  }
+  class "BillCalculator" as BillCalculator  #FFF59D {
+    -happyHour : HappyHourPolicy
+    --
+    +«create» BillCalculator(happyHour : HappyHourPolicy)
+    +lockPrice(order : Order, turn : int) : long
+  }
+  class "GameConfig" as GameConfig  {
+    -totalTurns : int
+    -tableCount : int
+    -seed : long
+    -menu : Menu
+    -minPaidCustomers : int
+    -minRevenueCents : long
+    -minAverageSatisfaction : int
+    --
+    +«create» GameConfig(totalTurns : int, tableCount : int, seed : long, menu : Menu, minPaidCustomers : int, minRevenueCents : long, minAverageSatisfaction : int)
+    {static} +base(seed : long) : GameConfig
+    +withMenu(otherMenu : Menu) : GameConfig
+    .. accessors ..
+    +getTotalTurns(), getTableCount(), getSeed()
+    +getMenu(), getMinPaidCustomers(), getMinRevenueCents()
+    +getMinAverageSatisfaction()
+  }
+  class "GameController" as GameController  #FFF59D {
+    -config : GameConfig
+    -schedule : ArrivalSchedule
+    -restaurant : Restaurant
+    -happyHour : HappyHourPolicy
+    -billCalculator : BillCalculator
+    -host : Host
+    -waiter : Waiter
+    -chef : Chef
+    -cashier : Cashier
+    -eventLog : List<GameEvent>
+    -currentTurn : int
+    -turnInProgress : boolean
+    --
+    +«create» GameController(config : GameConfig, schedule : ArrivalSchedule)
+    +beginTurn() : List<GameEvent>
+    +activateHappyHour() : ActionResult
+    +hostSeat(customerId : String, tableId : String) : ActionResult
+    +hostWait() : ActionResult
+    +waiterSeat(customerId : String, tableId : String) : ActionResult
+    +waiterTakeOrder(customerId : String) : ActionResult
+    +waiterServe(orderId : String) : ActionResult
+    +waiterWait() : ActionResult
+    +chefAdvance(orderId : String) : ActionResult
+    +chefWait() : ActionResult
+    +endTurn() : List<GameEvent>
+    +isGameOver() : boolean
+    +isHappyHourAvailable() : boolean
+    +hasHostActed() : boolean
+    +hasWaiterActed() : boolean
+    +hasChefActed() : boolean
+    -checkHostMayAct() : ActionResult
+    -checkWaiterMayAct() : ActionResult
+    -checkChefMayAct() : ActionResult
+    -record(result : ActionResult) : ActionResult
+    -event(text : String) : GameEvent
+    .. accessors ..
+    +getResult(), getCurrentTurn(), getTotalTurns()
+    +getSeed(), getMenu(), getRevenueCents()
+    +getAverageSatisfactionText(), getServedCount(), getDepartureCount()
+    +getPaidCount(), getQueue(), getTables()
+    +getCustomers(), getOrders(), getFreeTables()
+    +getCustomersAwaitingOrder(), getServableOrders(), getPreparableOrders()
+    +getNextPayingCustomer(), getHappyHourRemainingTurns(), getEventLog()
+  }
+  class "GameEvent" as GameEvent  {
+    -turn : int
+    -text : String
+    --
+    +«create» GameEvent(turn : int, text : String)
+    +toString() : String
+    .. accessors ..
+    +getTurn(), getText()
+  }
+  class "GameResult" as GameResult  {
+    -config : GameConfig
+    -paidCount : int
+    -revenueCents : long
+    -satisfactionSum : long
+    --
+    -«create» GameResult(config : GameConfig, paidCount : int, revenueCents : long, satisfactionSum : long)
+    {static} +evaluate(config : GameConfig, paidCount : int, revenueCents : long, satisfactionSum : long) : GameResult
+    {static} +formatAverage(sum : long, count : int) : String
+    +isPaidCountMet() : boolean
+    +isRevenueMet() : boolean
+    +isSatisfactionMet() : boolean
+    +isVictory() : boolean
+    .. accessors ..
+    +getPaidCount(), getRevenueCents(), getAverageText()
+    +getConfig()
+  }
+  class "HappyHourPolicy" as HappyHourPolicy  #C8E6C9 {
+    {static} +DURATION_TURNS : int
+    {static} +RECOVERY_POINTS : int
+    {static} -PERCENT_PAID : int
+    -activationTurn : int
+    --
+    +isAvailable() : boolean
+    +activate(turn : int) : ActionResult
+    +isActive(turn : int) : boolean
+    +remainingTurns(turn : int, totalTurns : int) : int
+    +applyDiscount(priceCents : long, turn : int) : long
+    +applyRecovery(customers : List<Customer>) : String
+  }
+}
+
+package "rush.entity <<Entity>>" {
+  class "ActionResult" as ActionResult <<value>> {
+    -success : boolean
+    -message : String
+    --
+    -«create» ActionResult(success : boolean, message : String)
+    {static} +ok(message : String) : ActionResult
+    {static} +fail(reason : String) : ActionResult
+    +isSuccess() : boolean
+    +toString() : String
+    .. accessors ..
+    +getMessage()
+  }
+  class "Cashier" as Cashier  {
+    {static} -OLDEST_FIRST : Comparator<Customer>
+    --
+    +«create» Cashier()
+    +payableCustomers(restaurant : Restaurant, turn : int) : List<Customer>
+    +collectPayment(restaurant : Restaurant, turn : int) : ActionResult
+  }
+  class "Chef" as Chef  {
+    --
+    +«create» Chef()
+    +advance(restaurant : Restaurant, orderId : String, turn : int) : ActionResult
+  }
+  class "ComboMeal" as ComboMeal  #C8E6C9 {
+    {static} -PERCENT_PAID : int
+    -first : MenuItem
+    -second : MenuItem
+    --
+    +«create» ComboMeal(first : MenuItem, second : MenuItem)
+    {static} -requireBase(item : MenuItem) : MenuItem
+    +describe() : String
+    .. accessors ..
+    +getComponents()
+  }
+  class "CriticCustomer" as CriticCustomer  {
+    {static} +FAST_SERVICE_TURNS : int
+    {static} -REACTION_POINTS : int
+    --
+    +«create» CriticCustomer(id : String, arrivalIndex : int, arrivalTurn : int, gameSeed : long)
+    +typeLabel() : String
+    #satisfactionLossPerTurn() : int
+    #onServed(turn : int) : String
+  }
+  abstract class "Customer" as Customer  #FFF59D {
+    {static} +MAX_SATISFACTION : int
+    -id : String
+    -arrivalIndex : int
+    -arrivalTurn : int
+    -choiceRng : Random
+    -satisfaction : int
+    -state : CustomerState
+    -table : Table
+    -order : Order
+    -readyToPayTurn : int
+    -recordedSatisfaction : int
+    --
+    #«create» Customer(id : String, arrivalIndex : int, arrivalTurn : int, gameSeed : long)
+    {static} +choiceSeed(gameSeed : long, arrivalIndex : int) : long
+    {abstract} +typeLabel() : String
+    {abstract} #satisfactionLossPerTurn() : int
+    +applyCustomerPricing(priceCents : long) : long
+    #onServed(turn : int) : String
+    #changeSatisfaction(delta : int) : void {leaf}
+    +applyWaitingPenalty() : void {leaf}
+    +recoverWhileWaiting(points : int) : boolean {leaf}
+    +hasRunOutOfPatience() : boolean {leaf}
+    +finishEatingIfDone(turn : int) : boolean {leaf}
+    +canPayOn(turn : int) : boolean {leaf}
+    ~chooseFrom(menu : Menu) : MenuItem
+    ~seatAt(assigned : Table) : void
+    ~attachOrder(placed : Order) : void
+    ~receiveServedOrder(turn : int) : String {leaf}
+    ~markPaid() : void
+    ~leave() : void
+    +toString() : String
+    .. accessors ..
+    +getId(), getArrivalIndex(), getArrivalTurn()
+    +getSatisfaction(), getState(), getTable()
+    +getOrder(), getReadyToPayTurn(), getRecordedSatisfaction()
+  }
+  enum "CustomerState" as CustomerState  {
+    WAITING
+    SEATED
+    ORDERED
+    EATING
+    READY_TO_PAY
+    PAID
+    LEFT
+    --
+    -awaitingService : boolean
+    ~«create» CustomerState(awaitingService : boolean)
+    +isAwaitingService() : boolean
+  }
+  class "Host" as Host  #C8E6C9 {
+    --
+    +«create» Host()
+    +seat(restaurant : Restaurant, customerId : String, tableId : String) : ActionResult
+  }
+  class "Menu" as Menu  #FFF59D {
+    -offerings : List<MenuItem>
+    --
+    +«create» Menu(offerings : List<MenuItem>)
+    {static} +standard() : Menu
+    +itemNamed(name : String) : MenuItem
+    .. accessors ..
+    +getOfferings()
+  }
+  class "MenuItem" as MenuItem  {
+    -name : String
+    -priceCents : long
+    -prepUnits : int
+    --
+    +«create» MenuItem(name : String, priceCents : long, prepUnits : int)
+    +describe() : String
+    +toString() : String
+    .. accessors ..
+    +getName(), getPriceCents(), getPrepUnits()
+  }
+  class "Money" as Money <<utility>> {
+    --
+    -«create» Money()
+    {static} +format(cents : long) : String
+    {static} +percent(cents : long, percent : int) : long
+  }
+  class "Order" as Order  {
+    -id : String
+    -customer : Customer
+    -item : MenuItem
+    -takenTurn : int
+    -status : OrderStatus
+    -unitsDone : int
+    -lockedPriceCents : long
+    -readyTurn : int
+    -servedTurn : int
+    --
+    ~«create» Order(id : String, customer : Customer, item : MenuItem, takenTurn : int)
+    +lockPrice(priceCents : long) : void
+    +isPriceLocked() : boolean
+    +isServableOn(turn : int) : boolean
+    ~advanceUnit(turn : int) : boolean
+    ~markServed(turn : int) : void
+    ~markPaid() : void
+    ~cancel() : void
+    +progress() : String
+    +toString() : String
+    .. accessors ..
+    +getId(), getCustomer(), getItem()
+    +getTakenTurn(), getStatus(), getUnitsDone()
+    +getLockedPriceCents(), getReadyTurn(), getServedTurn()
+  }
+  enum "OrderStatus" as OrderStatus  {
+    PENDING
+    PREPARING
+    READY
+    SERVED
+    PAID
+    CANCELLED
+    --
+    +isInKitchen() : boolean
+  }
+  class "RegularCustomer" as RegularCustomer  {
+    --
+    +«create» RegularCustomer(id : String, arrivalIndex : int, arrivalTurn : int, gameSeed : long)
+    +typeLabel() : String
+    #satisfactionLossPerTurn() : int
+  }
+  class "Restaurant" as Restaurant  {
+    -tables : List<Table>
+    -queue : List<Customer>
+    -customers : List<Customer>
+    -orders : List<Order>
+    -revenueCents : long
+    -nextOrderNumber : int
+    --
+    +«create» Restaurant(tableCount : int)
+    +admitArrival(customer : Customer) : void
+    ~seatCustomer(customerId : String, tableId : String) : ActionResult
+    ~createOrder(customer : Customer, item : MenuItem, turn : int) : Order
+    ~recordPayment(customer : Customer) : void
+    +removeAbandoned(customer : Customer) : String
+    +findCustomer(id : String) : Optional<Customer>
+    +findTable(id : String) : Optional<Table>
+    +findOrder(id : String) : Optional<Order>
+    +freeTables() : List<Table>
+    -countInState(state : CustomerState) : int
+    .. accessors ..
+    +getTables(), getQueue(), getCustomers()
+    +getOrders(), getRevenueCents(), getPaidCount()
+    +getDepartureCount(), getServedCount(), getRecordedSatisfactionSum()
+  }
+  abstract class "Staff" as Staff  {
+    -role : String
+    -actedThisTurn : boolean
+    --
+    #«create» Staff(role : String)
+    +startTurn() : void {leaf}
+    +hasActedThisTurn() : boolean {leaf}
+    +waitTurn() : ActionResult {leaf}
+    #markActed() : void {leaf}
+    #alreadyActed() : ActionResult {leaf}
+    .. accessors ..
+    +getRole()
+  }
+  class "Table" as Table  {
+    -id : String
+    -occupant : Customer
+    --
+    ~«create» Table(id : String)
+    +isFree() : boolean
+    ~occupy(customer : Customer) : void
+    ~release() : void
+    +toString() : String
+    .. accessors ..
+    +getId(), getOccupant()
+  }
+  class "VIPCustomer" as VIPCustomer  {
+    {static} -PERCENT_PAID : int
+    --
+    +«create» VIPCustomer(id : String, arrivalIndex : int, arrivalTurn : int, gameSeed : long)
+    +typeLabel() : String
+    #satisfactionLossPerTurn() : int
+    +applyCustomerPricing(priceCents : long) : long
+  }
+  class "Waiter" as Waiter  {
+    --
+    +«create» Waiter()
+    +seat(restaurant : Restaurant, customerId : String, tableId : String) : ActionResult
+    +takeOrder(restaurant : Restaurant, customerId : String, menu : Menu, turn : int) : ActionResult
+    +serve(restaurant : Restaurant, orderId : String, turn : int) : ActionResult
+  }
+}
+
+Main ..> ConsoleUI : creates
+Main ..> GameController : creates
+ConsoleUI *-- "1\ninput" InputReader
+ConsoleUI --> "1\ngame" GameController
+GameController ..> GameResult : creates
+GameResult --> "1\nconfig" GameConfig
+GameController --> "1\nconfig" GameConfig
+GameController --> "1\nschedule" ArrivalSchedule
+GameController *-- "*\neventLog" GameEvent
+GameController *-- "1\nbillCalculator" BillCalculator
+GameController *-- "1\nhappyHour" HappyHourPolicy
+BillCalculator --> "1\nhappyHour" HappyHourPolicy
+GameController *-- "1\nrestaurant" Restaurant
+GameController *-- "1\nhost" Host
+GameController *-- "1\nwaiter" Waiter
+GameController *-- "1\nchef" Chef
+GameController *-- "1\ncashier" Cashier
+BillCalculator ..> Order : locks price of
+GameConfig --> "1\nmenu" Menu
+ArrivalSchedule o-- "*\ncustomers" Customer
+ArrivalSchedule +-- ArrivalSchedule_Builder
+ArrivalSchedule +-- ArrivalSchedule_CustomerFactory
+ArrivalSchedule_Builder ..> ArrivalSchedule_CustomerFactory : uses
+ArrivalSchedule_CustomerFactory ..> Customer : creates
+Staff <|-- Waiter
+Staff <|-- Chef
+Staff <|-- Cashier
+Staff <|-- Host
+Staff ..> ActionResult : returns
+Host ..> Restaurant : acts on
+Waiter ..> Restaurant : acts on
+Chef ..> Restaurant : acts on
+Cashier ..> Restaurant : acts on
+Restaurant *-- "*\ntables" Table
+Restaurant o-- "*\nqueue" Customer
+Restaurant o-- "*\ncustomers" Customer
+Restaurant *-- "*\norders" Order
+Customer "0..1\noccupant" -- "0..1\ntable" Table
+Customer "1\ncustomer" -- "0..1\norder" Order
+Customer --> "1\nstate" CustomerState
+Order --> "1\nitem" MenuItem
+Order --> "1\nstatus" OrderStatus
+Menu o-- "1..*\nofferings" MenuItem
+Customer <|-- RegularCustomer
+Customer <|-- VIPCustomer
+Customer <|-- CriticCustomer
+MenuItem <|-- ComboMeal
+ComboMeal --> "2\nfirst, second" MenuItem
+
+note top of Staff
+**Inheritance**
+The one-task-per-turn rule is written once in
+Staff's final ({leaf}) methods: startTurn, waitTurn,
+markActed. Subclasses add only their own actions.
+end note
+note right of Customer
+**Abstraction / Template Method**
+abstract typeLabel() and satisfactionLossPerTurn().
+The final ({leaf}) applyWaitingPenalty() calls the
+subclass's satisfactionLossPerTurn().
+end note
+note bottom of Order
+**Encapsulation**
+lockPrice() throws if the price is already locked.
+State changes (advanceUnit, markServed, markPaid)
+are package-private (~).
+end note
+note bottom of VIPCustomer
+**Polymorphism**
+VIPCustomer overrides applyCustomerPricing() (pays 90%).
+CriticCustomer overrides onServed() (+10 if served within
+2 turns of ordering, otherwise -10). Control and Boundary
+classes never test a customer's type.
+end note
+note bottom of HappyHourPolicy
+**Single responsibility**
+All Happy Hour rules in one class: availability,
+2-turn duration, 20% off, +15 recovery.
+BillCalculator uses it.
+end note
+note bottom of ComboMeal
+**Inheritance + aggregation**
+A ComboMeal is a MenuItem and holds two base
+MenuItems. Overrides describe(); price is 90%
+of the two dishes.
+end note
+note bottom of Money
+**Used by** (dependencies not drawn,
+to keep the diagram readable):
+ConsoleUI, GameController, HappyHourPolicy
+Cashier, ComboMeal, MenuItem
+VIPCustomer
+end note
+note bottom of ActionResult
+**Used by** (dependencies not drawn,
+to keep the diagram readable):
+ConsoleUI, GameController, HappyHourPolicy
+Cashier, Chef, Host
+Restaurant, Staff, Waiter
+end note
+ConsoleUI -[hidden]down- GameController
+@enduml
